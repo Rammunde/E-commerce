@@ -1,32 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { styled } from "@mui/material/styles";
 import { Container, Paper, Grid, TextField, Button, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
-
-const useStyles = styled((theme) => ({
-  registerContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginTop: theme.spacing(8),
-    marginBottom: theme.spacing(8),
-  },
-  paper: {
-    padding: theme.spacing(4),
-    borderRadius: "2%",
-    width: "100%",
-  },
-  formElement: {
-    marginBottom: theme.spacing(2),
-  },
-  appButton: {
-    marginTop: theme.spacing(2),
-  },
-}));
-
 const AddProduct = () => {
-  const classes = useStyles();
   const navigate = useNavigate();
 
   const [productName, setProductName] = useState("");
@@ -39,8 +15,8 @@ const AddProduct = () => {
 
   const addProduct = () => {
     let user_id = localStorage.getItem('user');
-    let id = JSON.parse(user_id)
-    setUserId(id?.data?._id)
+    let id = JSON.parse(user_id);
+    setUserId(id?.data?._id);
     fetch("http://localhost:5000/products/addProduct", {
       method: "post",
       headers: { "content-Type": "application/json" },
@@ -59,7 +35,7 @@ const AddProduct = () => {
       });
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     fetch("http://localhost:5000/products/getProductList", {
       method: "get",
       headers: { "content-Type": "application/json" },
@@ -69,7 +45,7 @@ const AddProduct = () => {
         // setRespMsg(data?.msg);
         // setIsError(data?.err);
       });
-  },[])
+  }, []);
 
   const handleCloseResponeMsg = () => {
     setRespMsg("");
@@ -86,16 +62,29 @@ const AddProduct = () => {
     <Container
       component="main"
       maxWidth="xs"
-      className={classes.registerContainer}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        mt: 8,
+        mb: 8,
+      }}
     >
-      <Paper elevation={3} className={classes.paper}>
+      <Paper
+        elevation={3}
+        sx={{
+          p: 4,
+          borderRadius: "2%",
+          width: "100%",
+        }}
+      >
         <Grid container spacing={2}>
           <Grid item xs={12}>
             {respMsg && (
               <Alert
                 onClose={handleCloseResponeMsg}
-                severity= {error ? "error" : "success"}
-                style={{ marginBottom: "16px" }}
+                severity={error ? "error" : "success"}
+                sx={{ mb: 2 }}
               >
                 {respMsg}
               </Alert>
@@ -103,9 +92,9 @@ const AddProduct = () => {
           </Grid>
           <Grid item xs={12}>
             <h1>Add Product</h1>
-            <form className={classes.form}>
+            <form>
               <Grid container spacing={2}>
-                <Grid item xs={12} className={classes.formElement}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Name"
@@ -114,7 +103,7 @@ const AddProduct = () => {
                     onChange={(e) => setProductName(e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12} className={classes.formElement}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Company"
@@ -123,7 +112,7 @@ const AddProduct = () => {
                     onChange={(e) => setProductCampany(e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12} className={classes.formElement}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Description"
@@ -132,7 +121,7 @@ const AddProduct = () => {
                     onChange={(e) => setProductDescription(e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12} className={classes.formElement}>
+                <Grid item xs={12} sx={{ mb: 2 }}>
                   <TextField
                     fullWidth
                     label="Price"
@@ -146,7 +135,6 @@ const AddProduct = () => {
                 <Grid item xs={6}>
                   <Button
                     fullWidth
-                    className={classes.appButton}
                     variant="outlined"
                     color="primary"
                     onClick={clareForm}
@@ -157,7 +145,6 @@ const AddProduct = () => {
                 <Grid item xs={6}>
                   <Button
                     fullWidth
-                    className={classes.appButton}
                     variant="contained"
                     color="primary"
                     disabled={!productName || !productCampany || !productDescription || !productPrice}

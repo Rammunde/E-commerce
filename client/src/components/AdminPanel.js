@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 
 
+
 const useStyles = styled((theme) => ({
   tableContainer: {
     marginTop: theme.spacing(4),
@@ -28,9 +29,7 @@ const useStyles = styled((theme) => ({
     zIndex: 1,
   },
   paper: {
-    // paddingLeft: "10px",
-    // paddingRight:"10px"
-    padding: "10px"
+    padding: "10px",
   },
   modal: {
     display: "flex",
@@ -54,6 +53,51 @@ const useStyles = styled((theme) => ({
     },
   },
 }));
+const tableContainer = {
+  marginTop: '16px', // Assuming theme.spacing(4) is 16px
+  maxHeight: 500,
+  overflowY: "auto",
+};
+
+const table = {
+  width: "100%",
+};
+
+const tableHeaderCell = {
+  backgroundColor: "#e5e7f2",
+  fontWeight: "bold",
+  position: "sticky",
+  top: 0,
+  zIndex: 1,
+};
+
+const paper = {
+  padding: "10px",
+};
+
+const modal = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const modalContent = {
+  backgroundColor: "#fff", // Assuming theme.palette.background.paper is #fff
+  boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)", // Assuming theme.shadows[5] is this value
+  padding: "16px 16px 24px 16px", // Assuming theme.spacing(2, 2, 3, 2) translates to 16px 16px 24px 16px
+  width: "400px",
+};
+
+const tabIndicator = {
+  display: 'flex',
+  justifyContent: 'center',
+  backgroundColor: 'transparent',
+  '& > div': {
+    maxWidth: 100,
+    width: '100%',
+    backgroundColor: '#3f51b5', // Customize the color if needed
+  },
+};
 
 const AddProduct = () => {
   const classes = useStyles();
@@ -304,7 +348,7 @@ const AddProduct = () => {
         value={tabIndex}
         onChange={handleTabChange}
         variant="fullWidth"
-        classes={{ indicator: classes.tabIndicator }}
+        classes={{ indicator: tabIndicator }}
         style={{paddingBottom:"20px"}}
         TabIndicatorProps={{ children: <div /> }}
       >
@@ -320,14 +364,14 @@ const AddProduct = () => {
           <div>
             <Paper elevation={3}>
               <TableContainer>
-                <Table className={classes.table} aria-label="simple table">
+                <Table style={table} aria-label="simple table">
                   <TableHead>
                     <TableRow>
-                      <TableCell className={classes.tableHeaderCell}>Name</TableCell>
-                      <TableCell className={classes.tableHeaderCell}>User-Name</TableCell>
-                      <TableCell className={classes.tableHeaderCell}>Mobile</TableCell>
-                      <TableCell className={classes.tableHeaderCell}>Email</TableCell>
-                      <TableCell align="right" className={classes.tableHeaderCell}>Actions</TableCell>
+                      <TableCell style = {tableHeaderCell}>Name</TableCell>
+                      <TableCell style = {tableHeaderCell}>User-Name</TableCell>
+                      <TableCell style = {tableHeaderCell}>Mobile</TableCell>
+                      <TableCell style = {tableHeaderCell}>Email</TableCell>
+                      <TableCell align="right" style = {tableHeaderCell}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -399,7 +443,7 @@ const AddProduct = () => {
                 <Table className={classes.table} aria-label="simple table">
                   <TableHead>
                     <TableRow>
-                      {/* <TableCell className={classes.tableHeaderCell}>
+                      {/* <TableCell style = {tableHeaderCell}>
                         <Checkbox
                           style={{ paddingLeft: "1px" }}
                           color="primary"
@@ -414,17 +458,17 @@ const AddProduct = () => {
                           }
                         />
                       </TableCell> */}
-                      <TableCell className={classes.tableHeaderCell}>Name</TableCell>
-                      <TableCell align="right" className={classes.tableHeaderCell}>
+                      <TableCell style = {tableHeaderCell}>Name</TableCell>
+                      <TableCell align="right" style = {tableHeaderCell}>
                         Company
                       </TableCell>
-                      <TableCell align="right" className={classes.tableHeaderCell}>
+                      <TableCell align="right" style = {tableHeaderCell}>
                         Price
                       </TableCell>
-                      <TableCell align="right" className={classes.tableHeaderCell}>
+                      <TableCell align="right" style = {tableHeaderCell}>
                         Registration Date
                       </TableCell>
-                      <TableCell align="right" className={classes.tableHeaderCell}>
+                      <TableCell align="right" style = {tableHeaderCell}>
                         Action
                       </TableCell>
                     </TableRow>
@@ -508,17 +552,13 @@ const AddProduct = () => {
 
       </div>
       <Modal
-        className={classes.modal}
+        style={modal}
         open={openModal}
         onClose={handleCloseModal}
         closeAfterTransition
-        BackdropComponent={Backdrop}
-        BackdropProps={{
-          timeout: 500,
-        }}
       >
         <Fade in={openModal}>
-          <div className={classes.modalContent}>
+          <div style={modalContent}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 {respMsgOnEdit && (
@@ -534,7 +574,7 @@ const AddProduct = () => {
               <Grid item xs={12}>
                 <h1>Edit Product</h1>
                 <form className={classes.form}>
-                  <Paper elevation={4} className={classes.paper}>
+                  <Paper elevation={4} style = {paper}>
                     <Grid container spacing={2}>
                       <Grid item xs={12} className={classes.formElement}>
                         <TextField
@@ -596,17 +636,12 @@ const AddProduct = () => {
         </Fade>
       </Modal>
       <Modal
-        className={classes.modal}
+        style={modal}
         open={openUserModal}
         onClose={handleCloseUserModal}
-        closeAfterTransition
-        BackdropComponent={Backdrop}
-        BackdropProps={{
-          timeout: 500,
-        }}
       >
         <Fade in={openUserModal}>
-          <div className={classes.modalContent}>
+          <div style={modalContent}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 {respMsgOnEdit && (
@@ -622,7 +657,7 @@ const AddProduct = () => {
               <Grid item xs={12}>
                 <h1>Edit User</h1>
                 <form className={classes.form}>
-                  <Paper elevation={4} className={classes.paper}>
+                  <Paper elevation={4} style = {paper}>
                     <Grid container spacing={2}>
                       <Grid item xs={6} className={classes.formElement}>
                         <TextField
