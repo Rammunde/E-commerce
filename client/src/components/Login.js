@@ -1,41 +1,44 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { styled } from "@mui/material/styles";
-import { TextField, Button, Paper, Container, Grid, IconButton, InputAdornment, Typography } from "@mui/material";
-import Alert from "@mui/material/Alert";
+import { TextField, Button, Paper, Container, Grid, IconButton, InputAdornment, Typography, Alert } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
 
-
-const useStyles = styled((theme) => ({
+// Define styles using MUI v5 styled API
+const useStyles = styled({
   loginContainer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    marginTop: theme.spacing(8), // Adjust the margin top
-
+    marginTop: 64, // Adjust the margin top as needed
   },
   paper: {
-    padding: theme.spacing(4),
+    padding: "32px 24px", // Add padding to all sides
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    borderRadius: "2%",
+    borderRadius: 8,
     width: "100%",
-    marginTop: theme.spacing(8), // Adjust the margin top
-
+    marginTop: 64, // Adjust the margin top as needed
   },
   form: {
-    width: "100%", // Fix IE 11 issue.
-    // marginTop: theme.spacing(1),
+    width: "100%", // Fix IE 11 issue
+    // padding: "0 16px", // Add padding to left and right
+    // paddingTop:"30px",
+    marginBottom: 16, // Add margin at the bottom
   },
   formElement: {
-    marginBottom: theme.spacing(2),
+    marginBottom: 16,
   },
   appButton: {
-    margin: theme.spacing(3, 0, 2),
+    margin: "16px",
   },
-}));
+  linkContainer: {
+    marginTop: 20,
+    textAlign: "center",
+  },
+});
 
 const LoginPage = () => {
   const classes = useStyles();
@@ -62,19 +65,13 @@ const LoginPage = () => {
         setRespMsg(data?.msg);
         setError(data.err);
         if (data.err === false) {
-          localStorage.setItem("user", JSON.stringify(data))
-          // setTimeout(() => {
-          //     navigate("/");
-          // }, 2000);
+          localStorage.setItem("user", JSON.stringify(data));
           navigate("/");
-        }
-        else {
-          localStorage.clear('');
+        } else {
+          localStorage.clear();
         }
       });
   };
-
-
 
   const handleCloseReportUserManagement = () => {
     setRespMsg("");
@@ -84,32 +81,34 @@ const LoginPage = () => {
     <Container
       component="main"
       maxWidth="xs"
-      className={classes.registerContainer}
+      sx={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 8 }}
     >
-      <Paper elevation={3} className={classes.paper}>
+      <Paper elevation={3} sx={{ padding: "32px 24px", display: "flex", flexDirection: "column", alignItems: "center", borderRadius: 2, width: "100%", marginTop: 8 }}>
         <Grid container spacing={2}>
-          {respMsg && <Grid item xs={12}>
-            {(respMsg && error === false) && (
-              <Alert
-                onClose={handleCloseReportUserManagement}
-                severity="success"
-                style={{ marginBottom: "16px" }}
-              >
-                {respMsg}
-              </Alert>
-            )}
-            {(respMsg && error === true) && (
-              <Alert
-                onClose={handleCloseReportUserManagement}
-                severity="error"
-                style={{ marginBottom: "16px" }}
-              >
-                {respMsg}
-              </Alert>
-            )}
-          </Grid>}
+          {respMsg && (
+            <Grid item xs={12}>
+              {respMsg && !error && (
+                <Alert
+                  onClose={handleCloseReportUserManagement}
+                  severity="success"
+                  sx={{ marginBottom: 2 }}
+                >
+                  {respMsg}
+                </Alert>
+              )}
+              {respMsg && error && (
+                <Alert
+                  onClose={handleCloseReportUserManagement}
+                  severity="error"
+                  sx={{ marginBottom: 2 }}
+                >
+                  {respMsg}
+                </Alert>
+              )}
+            </Grid>
+          )}
           <Grid item xs={12}>
-            <h1>Login</h1>
+            <Typography variant="h5">Login</Typography>
             <form className={classes.form}>
               <Grid container spacing={2}>
                 <Grid item xs={12} className={classes.formElement}>
@@ -148,14 +147,14 @@ const LoginPage = () => {
                   />
                 </Grid>
               </Grid>
-              <Grid container spacing={2}>
+              <Grid container spacing={2} style={{paddingTop:"20px"}}>
                 <Grid item xs={6}>
                   <Button
                     fullWidth
                     className={classes.appButton}
                     variant="outlined"
                     color="primary"
-                    onClick={() => { }}
+                    onClick={() => {}}
                   >
                     Cancel
                   </Button>
@@ -175,7 +174,7 @@ const LoginPage = () => {
             </form>
           </Grid>
         </Grid>
-        <div className={classes.linkContainer}>
+        <div className={classes.linkContainer} style={{paddingTop:"20px"}}>
           <Typography variant="body2">
             Don't have an account? <Link to="/signup">Sign up</Link>
           </Typography>
@@ -183,7 +182,6 @@ const LoginPage = () => {
       </Paper>
     </Container>
   );
-
 };
 
 export default LoginPage;
