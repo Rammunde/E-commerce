@@ -11,11 +11,12 @@ import HomePage from "./components/Home";
 import ProductPage from "./components/ProductPage";
 import Container from "./components/Container";
 import AddProduct from "./components/AddProduct";
+import ContactUs from "./components/ContactUs/ContactUs";
 
 function App() {
   const user = JSON.parse(localStorage.getItem('user'));
   console.log("Role is", user)
-  const isAdmin = user?.data?.data?.role == 'Admin';
+  const isAdmin = user?.data?.data?.role === 'Admin';
 
   return (
     <div style={appStyle}>
@@ -24,9 +25,10 @@ function App() {
         <div style={mainContentStyle}>
           <Routes>
             <Route element={<PrivateComponent />}>
-              <Route path="/" element={<HomePage />} />
+              <Route path="/home" element={<HomePage />} />
               <Route path="/product" element={<ProductPage />} />
               <Route path="/product/:id" element={<ProductPage />} />
+              <Route path="/contactUs" element={<ContactUs />}/>
               {!isAdmin && <Route path="/admin" element={<AdminPanel />} />}
               {!isAdmin && <Route path="/addProduct" element={<AddProduct />} />}
               <Route path="/cart" element={<Container />} />
