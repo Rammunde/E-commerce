@@ -1,20 +1,13 @@
 import React, { useEffect, useState } from "react";
-import TextField from "@material-ui/core/TextField";
-import Button from "@material-ui/core/Button";
-import Paper from "@material-ui/core/Paper";
-import Container from "@material-ui/core/Container";
-import Grid from "@material-ui/core/Grid";
-import { makeStyles } from "@material-ui/core/styles";
-import Alert from "@material-ui/lab/Alert";
-import { useNavigate } from "react-router-dom";
-import IconButton from "@material-ui/core/IconButton";
-import InputAdornment from "@material-ui/core/InputAdornment";
-import Visibility from "@material-ui/icons/Visibility";
-import VisibilityOff from "@material-ui/icons/VisibilityOff";
-import { Link } from "react-router-dom";
-import { Typography } from "@material-ui/core";
+import { styled } from "@mui/material/styles";
+import { TextField, Button, Paper, Container, Grid, IconButton, InputAdornment, Typography } from "@mui/material";
+import Alert from "@mui/material/Alert";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import { useNavigate, Link } from "react-router-dom";
 
-const useStyles = makeStyles((theme) => ({
+
+const useStyles = styled((theme) => ({
   loginContainer: {
     display: "flex",
     flexDirection: "column",

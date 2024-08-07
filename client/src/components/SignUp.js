@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import Paper from "@material-ui/core/Paper";
-import Grid from "@material-ui/core/Grid";
-import TextField from "@material-ui/core/TextField";
-import Button from "@material-ui/core/Button";
-import Alert from "@material-ui/lab/Alert";
+import { styled } from "@mui/material/styles";
+import { Container, Paper, Grid, TextField, Button, IconButton, InputAdornment } from "@mui/material";
+import Alert from "@mui/material/Alert";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate } from "react-router-dom";
-import IconButton from "@material-ui/core/IconButton";
-import InputAdornment from "@material-ui/core/InputAdornment";
-import Visibility from "@material-ui/icons/Visibility";
-import VisibilityOff from "@material-ui/icons/VisibilityOff";
 
-const useStyles = makeStyles((theme) => ({
+
+const useStyles = styled((theme) => ({
   registerContainer: {
     display: "flex",
     flexDirection: "column",

@@ -1,27 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import Paper from "@material-ui/core/Paper";
-import TableContainer from "@material-ui/core/TableContainer";
-import Table from "@material-ui/core/Table";
-import TableHead from "@material-ui/core/TableHead";
-import TableBody from "@material-ui/core/TableBody";
-import TableRow from "@material-ui/core/TableRow";
-import TableCell from "@material-ui/core/TableCell";
-import Checkbox from "@material-ui/core/Checkbox";
-import Pagination from "@material-ui/lab/Pagination";
-import { useNavigate } from "react-router-dom";
-import Grid from "@material-ui/core/Grid";
-import Alert from "@material-ui/lab/Alert";
+import { styled } from "@mui/material/styles";
+import { Container, Paper,Grid, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Checkbox, Button, Menu, MenuItem, IconButton, TextField, Fade, Backdrop, Modal, Tabs, Tab, Tooltip } from "@mui/material";
+import Pagination from "@mui/material/Pagination"; // Pagination is part of @mui/material in v5
+import Alert from "@mui/material/Alert"; // Alert is part of @mui/material in v5
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import moment from "moment";
-import { Button, Menu, MenuItem, IconButton, TextField, Fade, Backdrop, Modal, Tabs, Tab } from "@material-ui/core";
-import DeleteIcon from "@material-ui/icons/Delete";
-import EditIcon from "@material-ui/icons/Edit";
-import MoreVertIcon from "@material-ui/icons/MoreVert";
-import Tooltip from "@material-ui/core/Tooltip";
+import { useNavigate } from "react-router-dom";
 
 
-const useStyles = makeStyles((theme) => ({
+
+const useStyles = styled((theme) => ({
   tableContainer: {
     marginTop: theme.spacing(4),
     maxHeight: 500,

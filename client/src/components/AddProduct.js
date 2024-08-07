@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import Paper from "@material-ui/core/Paper";
-import Grid from "@material-ui/core/Grid";
-import TextField from "@material-ui/core/TextField";
-import Button from "@material-ui/core/Button";
-import Alert from "@material-ui/lab/Alert";
+import { styled } from "@mui/material/styles";
+import { Container, Paper, Grid, TextField, Button, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
-const useStyles = makeStyles((theme) => ({
+
+const useStyles = styled((theme) => ({
   registerContainer: {
     display: "flex",
     flexDirection: "column",
