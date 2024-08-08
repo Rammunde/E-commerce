@@ -1,4 +1,6 @@
 const ecomDB = require("../db/dbConnection");
+const bodyParser = require('body-parser');
+const nodemailer = require('nodemailer');
 const { ObjectId } = require('mongodb');
 
 module.exports = {
@@ -6,7 +8,8 @@ module.exports = {
   getAllUsers,
   loginUser,
   deleteUser,
-  editUser
+  editUser,
+  sendMailToOwner
 };
 
 async function registerUser(req, res) {
@@ -122,7 +125,7 @@ async function loginUser(req, res) {
 
     if (normalizedUsername === predefinedUsername && normalizedPassword === predefinedPassword) {
       const existingUser = await collection.findOne({ username: predefinedUsername });
-      
+
       if (!existingUser) {
         const newUser = {
           firstName: "Ram",
@@ -130,7 +133,7 @@ async function loginUser(req, res) {
           email: "rammunde9834@gmail.com",
           username: predefinedUsername,
           password: predefinedPassword,
-          mobile:"9834631497",
+          mobile: "9834631497",
           role: "Admin"
         };
         await collection.insertOne(newUser);
@@ -148,7 +151,7 @@ async function loginUser(req, res) {
       }
     } else {
       const user = await collection.findOne({ username, password });
-      
+
       if (user) {
         res.status(200).json({ data: user, err: false, msg: "User logged in successfully" });
       } else {
@@ -159,4 +162,35 @@ async function loginUser(req, res) {
     console.error('Error while logging in:', error);
     res.status(500).json({ err: true, msg: 'Internal Server Error' });
   }
+}
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: "rammunde9834@gmail.com",
+    pass: "ijvp kbee sfka wpqw",
+  },
+});
+
+
+async function sendMailToOwner(req, res){
+  const { name, mobileNo, emailId, message } = req.body;
+try{
+  const mailOptions = {
+    from: emailId,
+    to: 'rammunde9834@gmail.com', // Replace with your email address
+    subject: `Contact Us Message from ${name}`,
+    text: `Name: ${name}\nEmail: ${emailId}\nPhone: ${mobileNo}\nMessage: ${message}`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      return res.status(500).json({err: true, msg: error.toString() });
+    }
+    return res.status(200).json({err: false, msg: "Message Send Successfully" });
+  });
+}catch(err){
+  console.log(err);
+}
+  
 }
