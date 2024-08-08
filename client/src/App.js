@@ -25,12 +25,14 @@ function App() {
         <div style={mainContentStyle}>
           <Routes>
             <Route element={<PrivateComponent />}>
-              <Route path="/home" element={<HomePage />} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/product" element={<ProductPage />} />
               <Route path="/product/:id" element={<ProductPage />} />
               <Route path="/contactUs" element={<ContactUs />}/>
-              {!isAdmin && <Route path="/admin" element={<AdminPanel />} />}
-              {!isAdmin && <Route path="/addProduct" element={<AddProduct />} />}
+              {/* {!isAdmin && <Route path="/admin" element={<AdminPanel />} />}
+              {!isAdmin && <Route path="/addProduct" element={<AddProduct />} />} */}
+              <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/addProduct" element={<AddProduct />} />
               <Route path="/cart" element={<Container />} />
               <Route path="/logout" element={<h1>Logout products list</h1>} />
               <Route path="/profile" element={<h1>Profile products list</h1>} />
