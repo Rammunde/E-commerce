@@ -41,27 +41,27 @@ const Nav = () => {
       />
       {auth ? (
         <ul className="nav-ul" style={{ listStyleType: "none", margin: 0, padding: 0, overflow: "hidden" }}>
-          {!isAdmin && (
-            <><li style={{ float: "left", marginRight: "20px" }}>
-              <Link to="/home">Home</Link>
+          {/* {!isAdmin && ( */}
+            <li style={{ float: "left", marginRight: "20px" }}>
+              <Link to="/">Home</Link>
             </li>
               <li style={{ float: "left", marginRight: "20px" }}>
                 <Link to="/product">Products</Link>
               </li>
-              <li style={{ float: "left", marginRight: "20px" }}>
-                <Link to="/contactUs">Contact Us</Link>
-              </li>
-              </>
-            )}
+            
+            {/* // )} */}
 
-          {isAdmin && (
-            <><li style={{ float: "left", marginRight: "20px" }}>
+          {/* {isAdmin && ( */}
+            <li style={{ float: "left", marginRight: "20px" }}>
               <Link to="/admin">Admin Panel</Link>
             </li>
               <li style={{ float: "left", marginRight: "20px" }}>
                 <Link to="/addProduct">Add Product</Link>
               </li>
-            </>)}
+            {/* </>)} */}
+            <li style={{ float: "left", marginRight: "20px" }}>
+                <Link to="/contactUs">Contact Us</Link>
+              </li>
           <li style={{ float: "right", position: "relative", marginRight: "20px" }}>
             <Link to="/cart" style={{ position: "relative", display: "inline-block" }}>
               <FontAwesomeIcon icon={faCartShopping} size="lg" />
