@@ -1,4 +1,7 @@
 const db = require("../db/dbConnection");
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { ObjectId } = require("mongodb");
 module.exports = {
   addProduct,
@@ -7,27 +10,57 @@ module.exports = {
   editProduct
 };
 
-async function addProduct(req, res) {
-  const { name, price, company, userId, productDescription } = req.body;
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = 'uploads/';
+    // Ensure the directory exists
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
 
-  let _doc = {
-    name: name,
-    price: price,
-    company: company,
-    userId: userId,
-    productDescription: productDescription,
-    registrationDate: new Date(),
-  };
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit
+});
+
+async function addProduct(req, res) {
+  const uploadMiddleware = upload.array('productImages');
 
   try {
-    const collection = await db.connectProductsDb();
-    await collection.insertOne(_doc);
+    await new Promise((resolve, reject) => {
+      uploadMiddleware(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
 
-    res.json({ err: false, msg: "Product added Successfully" });
+    const { name, price, company, userId, productDescription } = req.body;
+    const productImages = req.files ? req.files.map(file => file.path) : [];
+
+    const productDoc = {
+      name: name,
+      price: price,
+      company: company,
+      userId: userId,
+      productDescription: productDescription,
+      productImage: productImages,
+      registrationDate: new Date(),
+    };
+
+    const collection = await db.connectProductsDb();
+    await collection.insertOne(productDoc);
+
+    res.json({ err: false, msg: "Product added successfully" });
   } catch (error) {
-    res.json({ err: true, msg: "Failed to add product" });
     console.error("Error while adding product:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ err: true, msg: "Failed to add product" });
   }
 }
 
@@ -70,10 +103,10 @@ async function editProduct(req, res) {
     { _id: new ObjectId(productId) },
     { $set: { name, price, company, userId } }
   );
-  if(result.modifiedCount > 0){
+  if (result.modifiedCount > 0) {
     res.status(200).json({ err: false, msg: "Product Updated successfully" });
   }
-  else{
-    res.status(500).json({ err: true, msg: "Internal Server Error" });    
+  else {
+    res.status(500).json({ err: true, msg: "Internal Server Error" });
   }
 }
