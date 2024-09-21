@@ -10,7 +10,7 @@ module.exports = {
   editProduct
 };
 
-const storage = multer.diskStorage({
+const storage = multer.memoryStorage({
   destination: (req, file, cb) => {
     const uploadPath = 'uploads/';
     // Ensure the directory exists
@@ -42,7 +42,20 @@ async function addProduct(req, res) {
     });
 
     const { name, price, company, userId, productDescription } = req.body;
-    const productImages = req.files ? req.files.map(file => file.path) : [];
+    const files = req.files || [];
+    const base64Images = await Promise.all(files.map(file => {
+      if (!file.buffer) {
+        throw new Error("File buffer is missing");
+      }
+      return new Promise((resolve, reject) => {
+        try {
+          const base64String = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+          resolve(base64String);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }));
 
     const productDoc = {
       name: name,
@@ -50,7 +63,7 @@ async function addProduct(req, res) {
       company: company,
       userId: userId,
       productDescription: productDescription,
-      productImage: productImages,
+      productImages: base64Images, // Base64-encoded images
       registrationDate: new Date(),
     };
 

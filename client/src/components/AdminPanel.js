@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { styled } from "@mui/material/styles";
-import { Container, Paper,Grid, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Checkbox, Button, Menu, MenuItem, IconButton, TextField, Fade, Backdrop, Modal, Tabs, Tab, Tooltip } from "@mui/material";
+import { Container, Paper, Grid, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Checkbox, Button, Menu, MenuItem, IconButton, TextField, Fade, Backdrop, Modal, Tabs, Tab, Tooltip } from "@mui/material";
 import Pagination from "@mui/material/Pagination"; // Pagination is part of @mui/material in v5
 import Alert from "@mui/material/Alert"; // Alert is part of @mui/material in v5
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -128,7 +128,7 @@ const AddProduct = () => {
   const [editUserId, setEditingUserId] = useState(0);
   const [userMobile, setUserMobile] = useState("");
   const [userRole, setUserRole] = useState("");
-  
+
 
 
   const getProductList = () => {
@@ -344,12 +344,12 @@ const AddProduct = () => {
 
   return (
     <Container component="main" maxWidth="md">
-     <Tabs
+      <Tabs
         value={tabIndex}
         onChange={handleTabChange}
         variant="fullWidth"
         classes={{ indicator: tabIndicator }}
-        style={{paddingBottom:"20px"}}
+        style={{ paddingBottom: "20px" }}
         TabIndicatorProps={{ children: <div /> }}
       >
         <Tab label="Users" className={classes.tabRoot} />
@@ -360,18 +360,18 @@ const AddProduct = () => {
         {tabIndex === 1 && <div>Products</div>}
       </div> */}
       <div className={classes.tabPanel}>
-      {tabIndex === 0 && (
+        {tabIndex === 0 && (
           <div>
             <Paper elevation={3}>
               <TableContainer>
                 <Table style={table} aria-label="simple table">
                   <TableHead>
                     <TableRow>
-                      <TableCell style = {tableHeaderCell}>Name</TableCell>
-                      <TableCell style = {tableHeaderCell}>User-Name</TableCell>
-                      <TableCell style = {tableHeaderCell}>Mobile</TableCell>
-                      <TableCell style = {tableHeaderCell}>Email</TableCell>
-                      <TableCell align="right" style = {tableHeaderCell}>Actions</TableCell>
+                      <TableCell style={tableHeaderCell}>Name</TableCell>
+                      <TableCell style={tableHeaderCell}>User-Name</TableCell>
+                      <TableCell style={tableHeaderCell}>Mobile</TableCell>
+                      <TableCell style={tableHeaderCell}>Email</TableCell>
+                      <TableCell align="right" style={tableHeaderCell}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -413,7 +413,7 @@ const AddProduct = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Grid container justifyContent="flex-end" style={{ marginTop: '16px', paddingBottom: '16px'  }}>
+              <Grid container justifyContent="flex-end" style={{ marginTop: '16px', paddingBottom: '16px' }}>
                 <Pagination
                   count={Math.ceil(users.length / rowsPerPage)}
                   page={page}
@@ -458,17 +458,20 @@ const AddProduct = () => {
                           }
                         />
                       </TableCell> */}
-                      <TableCell style = {tableHeaderCell}>Name</TableCell>
-                      <TableCell align="right" style = {tableHeaderCell}>
+                      <TableCell style={tableHeaderCell}>Name</TableCell>
+                      <TableCell align="right" style={tableHeaderCell}>
                         Company
                       </TableCell>
-                      <TableCell align="right" style = {tableHeaderCell}>
+                      <TableCell align="right" style={tableHeaderCell}>
                         Price
                       </TableCell>
-                      <TableCell align="right" style = {tableHeaderCell}>
+                      <TableCell align="right" style={tableHeaderCell}>
                         Registration Date
                       </TableCell>
-                      <TableCell align="right" style = {tableHeaderCell}>
+                      <TableCell align="right" style={tableHeaderCell}>
+                        Images
+                      </TableCell>
+                      <TableCell align="right" style={tableHeaderCell}>
                         Action
                       </TableCell>
                     </TableRow>
@@ -498,6 +501,17 @@ const AddProduct = () => {
                           {product?.registrationDate
                             ? moment(product?.registrationDate).format("DD-MM-YYYY")
                             : ""}
+                        </TableCell>
+                        <TableCell>
+                          {product.productImages && product.productImages.length > 0 ? (
+                            <img
+                              src={product.productImages[0]} // Directly use the base64 string here
+                              alt={product?.name}
+                              style={{ width: 50, height: 50, objectFit: "cover" }}
+                            />
+                          ) : (
+                            "No Image"
+                          )}
                         </TableCell>
                         <TableCell align="right">
                           <IconButton
@@ -531,21 +545,21 @@ const AddProduct = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-            <Grid
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: "10px",
-              }}
-            >
-              <Pagination
-                count={Math.ceil(products.length / rowsPerPage)}
-                page={page}
-                onChange={handleChangePage}
-                style={{ marginBottom: "2px" }}
-                color="primary"
-              />
-            </Grid>
+              <Grid
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: "10px",
+                }}
+              >
+                <Pagination
+                  count={Math.ceil(products.length / rowsPerPage)}
+                  page={page}
+                  onChange={handleChangePage}
+                  style={{ marginBottom: "2px" }}
+                  color="primary"
+                />
+              </Grid>
             </Paper>
           </div>
         )}
@@ -574,7 +588,7 @@ const AddProduct = () => {
               <Grid item xs={12}>
                 <h1>Edit Product</h1>
                 <form className={classes.form}>
-                  <Paper elevation={4} style = {paper}>
+                  <Paper elevation={4} style={paper}>
                     <Grid container spacing={2}>
                       <Grid item xs={12} className={classes.formElement}>
                         <TextField
@@ -657,7 +671,7 @@ const AddProduct = () => {
               <Grid item xs={12}>
                 <h1>Edit User</h1>
                 <form className={classes.form}>
-                  <Paper elevation={4} style = {paper}>
+                  <Paper elevation={4} style={paper}>
                     <Grid container spacing={2}>
                       <Grid item xs={6} className={classes.formElement}>
                         <TextField
@@ -684,19 +698,18 @@ const AddProduct = () => {
                           variant="outlined"
                           value={userMobile}
                           type="number"
-                          inputProps={{ 
+                          inputProps={{
                             pattern: "[0-9]*", // Only digits allowed
                             maxLength: 10
                           }}
-                          onChange={(e) => 
-                          {
+                          onChange={(e) => {
                             const value = e.target.value;
                             if (/^\d*$/.test(value) && value.length <= 10) { // Allow only digits and enforce length
                               setUserMobile(value);
                             }
                             // setUserMobile(e.target.value)}
                           }
-                        }
+                          }
                         />
                       </Grid>
                       <Grid item xs={12} className={classes.formElement}>
@@ -745,7 +758,7 @@ const AddProduct = () => {
                           className={classes.appButton}
                           variant="contained"
                           color="primary"
-                          disabled={userMobile?.length!=10 || !userName || !password || !userFirstName || !userLastName || !userEmail}
+                          disabled={userMobile?.length != 10 || !userName || !password || !userFirstName || !userLastName || !userEmail}
                           onClick={saveEditUser}
                         >
                           Save
