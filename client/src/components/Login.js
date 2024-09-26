@@ -48,6 +48,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [respMsg, setRespMsg] = useState("");
+  const [checkValidate, setCheckValidate] = useState(false);
   const [error, setError] = useState(false);
 
   const navigateToSignUp = () => {
@@ -55,22 +56,26 @@ const LoginPage = () => {
   };
 
   const loginUser = () => {
-    fetch("http://localhost:5000/users/loginUser", {
-      method: "post",
-      headers: { "content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    })
-      .then((resp) => resp.json())
-      .then((data) => {
-        setRespMsg(data?.msg);
-        setError(data.err);
-        if (data.err === false) {
-          localStorage.setItem("user", JSON.stringify(data));
-          navigate("/");
-        } else {
-          localStorage.clear();
-        }
-      });
+    setCheckValidate(true);
+    if (username?.trim() && password) {
+      fetch("http://localhost:5000/users/loginUser", {
+        method: "post",
+        headers: { "content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      })
+        .then((resp) => resp.json())
+        .then((data) => {
+          setRespMsg(data?.msg);
+          setError(data.err);
+          if (data.err === false) {
+            localStorage.setItem("user", JSON.stringify(data));
+            navigate("/");
+          } else {
+            localStorage.clear();
+          }
+        });
+      setCheckValidate(false);
+    }
   };
 
   const handleCloseReportUserManagement = () => {
@@ -116,6 +121,7 @@ const LoginPage = () => {
                     fullWidth
                     label="Username"
                     variant="outlined"
+                    error={checkValidate ? username?.trim()?.length > 0 ? false : true : false}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="off"
@@ -127,6 +133,7 @@ const LoginPage = () => {
                     fullWidth
                     label="Password"
                     variant="outlined"
+                    error={checkValidate ? password?.length > 0 ? false : true : false}
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -147,14 +154,14 @@ const LoginPage = () => {
                   />
                 </Grid>
               </Grid>
-              <Grid container spacing={2} style={{paddingTop:"20px"}}>
+              <Grid container spacing={2} style={{ paddingTop: "20px" }}>
                 <Grid item xs={6}>
                   <Button
                     fullWidth
                     className={classes.appButton}
                     variant="outlined"
                     color="primary"
-                    onClick={() => {}}
+                    onClick={() => { setCheckValidate(false) }}
                   >
                     Cancel
                   </Button>
@@ -174,7 +181,7 @@ const LoginPage = () => {
             </form>
           </Grid>
         </Grid>
-        <div className={classes.linkContainer} style={{paddingTop:"20px"}}>
+        <div className={classes.linkContainer} style={{ paddingTop: "20px" }}>
           <Typography variant="body2">
             Don't have an account? <Link to="/signup">Sign up</Link>
           </Typography>
