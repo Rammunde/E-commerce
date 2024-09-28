@@ -69,7 +69,11 @@ const LoginPage = () => {
           setError(data.err);
           if (data.err === false) {
             localStorage.setItem("user", JSON.stringify(data));
-            navigate("/");
+            if(data?.data?.role === "Admin"){
+              navigate("/admin");
+            }else{
+              navigate("/");
+            }
           } else {
             localStorage.clear();
           }
