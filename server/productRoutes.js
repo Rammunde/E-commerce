@@ -16,5 +16,6 @@ router.post('/addProduct', productService.addProduct);
 router.get('/getProductList', productService.getProductList);
 router.delete('/deleteProduct/:id', productService.deleteProduct);
 router.post('/editProduct', productService.editProduct);
+router.post('/addProductToCart', productService.addProductToCart);
 
 module.exports = router;

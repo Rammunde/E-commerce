@@ -41,6 +41,7 @@ const YourComponent = () => {
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [respMsg, setRespMsg] = useState("");
+  const [checkValidate, setCheckValidate] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -51,16 +52,22 @@ const YourComponent = () => {
   }, [navigate]);
 
   const RegisterUser = () => {
-    fetch("http://localhost:5000/users/register", {
-      method: "post",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName, lastName, email, mobile, username, password }),
-    })
-      .then((resp) => resp.json())
-      .then((data) => {
-        setRespMsg(data?.msg);
-        navigate('/login');
-      });
+    setCheckValidate(true);
+    let emailValidate = validateEmail(email);
+    let mobileNumberValidate = validateMobileNo(mobile);
+    if (firstName?.trim() && lastName?.trim() && username?.trim() && mobile.length === 10) {
+      fetch("http://localhost:5000/users/register", {
+        method: "post",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, email, mobile, username, password }),
+      })
+        .then((resp) => resp.json())
+        .then((data) => {
+          setRespMsg(data?.msg);
+          navigate('/login');
+        });
+      setCheckValidate(false);
+    }
   };
 
   useEffect(() => {
@@ -82,11 +89,25 @@ const YourComponent = () => {
     setMobile("");
     setPassword("");
     setRespMsg("");
+    setCheckValidate(false);
   };
 
   const handleCloseReportUserManagement = () => {
     setRespMsg("");
   };
+
+
+  const validateEmail = (email) => {
+    const isValidEmail = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
+    if (email && email.match(isValidEmail)) {
+      return false
+    } else {
+      return true;
+    }
+  }
+  const validateMobileNo = (no) => {
+    return no?.trim()?.length === 10 && Number.isInteger(no) ? false : true;
+  }
 
   return (
     <StyledContainer
@@ -111,8 +132,9 @@ const YourComponent = () => {
                 fullWidth
                 label="First Name"
                 variant="outlined"
+                error={checkValidate ? firstName?.trim() ? false : true : false}
                 value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                onChange={(e) => { setFirstName(e.target.value), setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12} sm={6}>
@@ -120,8 +142,9 @@ const YourComponent = () => {
                 fullWidth
                 label="Last Name"
                 variant="outlined"
+                error={checkValidate ? lastName?.trim() ? false : true : false}
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                onChange={(e) => { setLastName(e.target.value), setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12}>
@@ -129,8 +152,9 @@ const YourComponent = () => {
                 fullWidth
                 label="Email Address"
                 variant="outlined"
+                error={checkValidate ? validateEmail(email) : false}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value), setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12}>
@@ -138,8 +162,9 @@ const YourComponent = () => {
                 fullWidth
                 label="Mobile Number"
                 variant="outlined"
+                error={checkValidate ? validateMobileNo(mobile) : false}
                 value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
+                onChange={(e) => { setMobile(e.target.value), setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12}>
@@ -147,8 +172,9 @@ const YourComponent = () => {
                 fullWidth
                 label="Username"
                 variant="outlined"
+                error={checkValidate ? username?.trim() ? false : true : false}
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => { setUsername(e.target.value), setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12}>
@@ -156,6 +182,7 @@ const YourComponent = () => {
                 fullWidth
                 label="Password"
                 variant="outlined"
+                error={checkValidate ? password?.trim() ? false : true : false}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -163,7 +190,7 @@ const YourComponent = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => { setShowPassword(!showPassword), setCheckValidate(false) }}
                         edge="end"
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}

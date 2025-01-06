@@ -1,22 +1,18 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
 
 const Nav = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  console.log("Role is", user)
-  console.log("Role is", user?.data?.role)
-
-  const isAdmin = user?.data?.role === 'Admin';
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isAdmin = user?.data?.role === "Admin";
   const auth = localStorage.getItem("user");
-  const fullName = JSON.parse(auth)?.data?.firstName + " " + JSON.parse(auth)?.data?.lastName;
+  const fullName =
+    JSON.parse(auth)?.data?.firstName + " " + JSON.parse(auth)?.data?.lastName;
   const navigate = useNavigate();
   const [cartItemCount, setCartItemCount] = React.useState(3);
 
-  // Example function to fetch cart item count
   const fetchCartItemCount = () => {
-    // Replace with actual logic to get cart item count
     const cart = JSON.parse(localStorage.getItem("cart"));
     setCartItemCount(cart ? cart.length : 0);
   };
@@ -26,80 +22,171 @@ const Nav = () => {
   }, []);
 
   const logOut = () => {
-    console.log("logOut");
     localStorage.clear();
     navigate("/login");
   };
 
-  return (
-    <div style={{ background: "skyblue", paddingTop: "5px" }}>
-      <img
-        alt="Logo"
-        className="logo"
-        src="https://img.etimg.com/thumb/msid-100973430,width-650,height-488,imgsize-2985114,resizemode-75/indian-ecommerce-market.jpg"
-        style={{ height: "50px", float: "left" }}
-      />
-      {auth ? (
-        <ul className="nav-ul" style={{ listStyleType: "none", margin: 0, padding: 0, overflow: "hidden" }}>
-          {/* {!isAdmin && ( */}
-            <li style={{ float: "left", marginRight: "20px" }}>
-              <Link to="/">Home</Link>
-            </li>
-              <li style={{ float: "left", marginRight: "20px" }}>
-                <Link to="/product">Products</Link>
-              </li>
-            
-            {/* // )} */}
+  const activeLinkStyle = {
+    textDecoration: "underline",
+    textDecorationColor: "white", // Custom underline color
+    textUnderlineOffset: "4px",    // Space between text and underline
+    // marginBottom: "4px",           // Additional space below the text
+    fontWeight: "bold",
+  };
 
-          {/* {isAdmin && ( */}
-            <li style={{ float: "left", marginRight: "20px" }}>
-              <Link to="/admin">Admin Panel</Link>
-            </li>
-              <li style={{ float: "left", marginRight: "20px" }}>
-                <Link to="/addProduct">Add Product</Link>
-              </li>
-            {/* </>)} */}
-            <li style={{ float: "left", marginRight: "20px" }}>
-                <Link to="/contactUs">Contact Us</Link>
-              </li>
-          <li style={{ float: "right", position: "relative", marginRight: "20px" }}>
-            <Link to="/cart" style={{ position: "relative", display: "inline-block" }}>
-              <FontAwesomeIcon icon={faCartShopping} size="lg" />
-              {cartItemCount > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: "-10px",
-                    right: "-10px",
-                    background: "red",
-                    color: "white",
-                    borderRadius: "50%",
-                    padding: "0 6px",
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {cartItemCount}
-                </span>
+  const navLinkStyle = {
+    marginRight: "20px",
+    color: "white",
+    textDecoration: "none",
+    padding: "10px 0", // Adds some vertical padding for better click area
+  };
+
+  return (
+    <div
+      style={{
+        background: "skyblue",
+        paddingTop: "5px",
+        paddingBottom: "10px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <img
+          alt="Logo"
+          className="logo"
+          src="https://img.etimg.com/thumb/msid-100973430,width-650,height-488,imgsize-2985114,resizemode-75/indian-ecommerce-market.jpg"
+          style={{ height: "50px", marginRight: "20px" }} // added margin for spacing
+        />
+        <div style={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
+          {auth && (
+            <>
+              {!isAdmin && (
+                <>
+                  <NavLink
+                    to="/"
+                    style={({ isActive }) =>
+                      isActive
+                        ? { ...navLinkStyle, ...activeLinkStyle }
+                        : navLinkStyle
+                    }
+                  >
+                    Home
+                  </NavLink>
+                  <NavLink
+                    to="/product"
+                    style={({ isActive }) =>
+                      isActive
+                        ? { ...navLinkStyle, ...activeLinkStyle }
+                        : navLinkStyle
+                    }
+                  >
+                    Products
+                  </NavLink>
+                  <NavLink
+                    to="/contactUs"
+                    style={({ isActive }) =>
+                      isActive
+                        ? { ...navLinkStyle, ...activeLinkStyle }
+                        : navLinkStyle
+                    }
+                  >
+                    Contact Us
+                  </NavLink>
+                </>
               )}
-            </Link>
-          </li>
-          <li style={{ float: "right" }}>
-            <Link onClick={logOut} to="/login">
-              Logout ({fullName})
-            </Link>
-          </li>
-        </ul>
-      ) : (
-        <ul className="nav-ul" style={{ listStyleType: "none", margin: 0, padding: 0, overflow: "hidden" }}>
-          <li style={{ float: "right", marginRight: "20px" }}>
-            <Link to="/signup">Signup</Link>
-          </li>
-          <li style={{ float: "right" }}>
-            <Link to="/login">Login</Link>
-          </li>
-        </ul>
-      )}
+              {isAdmin && (
+                <>
+                  <NavLink
+                    to="/admin"
+                    style={({ isActive }) =>
+                      isActive
+                        ? { ...navLinkStyle, ...activeLinkStyle }
+                        : navLinkStyle
+                    }
+                  >
+                    Admin Panel
+                  </NavLink>
+                  <NavLink
+                    to="/addProduct"
+                    style={({ isActive }) =>
+                      isActive
+                        ? { ...navLinkStyle, ...activeLinkStyle }
+                        : navLinkStyle
+                    }
+                  >
+                    Add Product
+                  </NavLink>
+                </>
+              )}
+            </>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {!auth ? (
+            <>
+              <NavLink
+                to="/signup"
+                style={({ isActive }) =>
+                  isActive
+                    ? { ...navLinkStyle, ...activeLinkStyle }
+                    : navLinkStyle
+                }
+              >
+                Signup
+              </NavLink>
+              <NavLink
+                to="/login"
+                style={({ isActive }) =>
+                  isActive
+                    ? { ...navLinkStyle, ...activeLinkStyle }
+                    : navLinkStyle
+                }
+              >
+                Login
+              </NavLink>
+            </>
+          ) : (
+            <>
+              <NavLink onClick={logOut} to="/login" style={navLinkStyle}>
+                Logout ({fullName})
+              </NavLink>
+
+              <NavLink
+                to="/cart"
+                style={({ isActive }) =>
+                  isActive
+                    ? { ...navLinkStyle, ...activeLinkStyle }
+                    : navLinkStyle
+                }
+              >
+                <FontAwesomeIcon icon={faCartShopping} size="lg" />
+                {cartItemCount > 0 && (
+                  <span
+                    style={{
+                      position: "relative",
+                      top: "-10px",
+                      right: "-10px",
+                      background: "red",
+                      color: "white",
+                      borderRadius: "50%",
+                      padding: "0 6px",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {cartItemCount}
+                  </span>
+                )}
+              </NavLink>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
