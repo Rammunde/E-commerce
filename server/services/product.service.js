@@ -1,4 +1,5 @@
 const db = require("../db/dbConnection");
+const config = require("../db/config");
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -7,7 +8,8 @@ module.exports = {
   addProduct,
   getProductList,
   deleteProduct,
-  editProduct
+  editProduct,
+  addProductToCart
 };
 
 const storage = multer.memoryStorage({
@@ -122,4 +124,54 @@ async function editProduct(req, res) {
   else {
     res.status(500).json({ err: true, msg: "Internal Server Error" });
   }
+}
+
+
+async function addProductToCart(req, res) {
+  const uploadMiddleware = upload.array('productImages');
+
+  try {
+    await new Promise((resolve, reject) => {
+      uploadMiddleware(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    const { name, price, company, userId, productDescription } = req.body;
+    const files = req.files || [];
+    const base64Images = await Promise.all(files.map(file => {
+      if (!file.buffer) {
+        throw new Error("File buffer is missing");
+      }
+      return new Promise((resolve, reject) => {
+        try {
+          const base64String = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+          resolve(base64String);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }));
+
+    const productDoc = {
+      name: name,
+      price: price,
+      company: company,
+      userId: userId,
+      productDescription: productDescription,
+      productImages: base64Images, // Base64-encoded images
+      registrationDate: new Date(),
+    };
+
+    const conn = await db.connectEcomerceDB();
+    const collection = conn.collection(config.ACTIVE_CART);
+    await collection.insertOne(productDoc);
+
+    res.json({ error: false, msg: "Item successfully added to your cart" });
+  } catch (error) {
+    console.error("error in addProductToCart ", error);
+    res.json({ error: true, msg: "Something went wrong" });
+  }
+
 }

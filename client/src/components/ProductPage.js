@@ -1,316 +1,260 @@
-import React from "react";
-import { useParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import Alert from "@mui/material/Alert";
+import { useParams, useNavigate } from "react-router-dom";
+import { Grid, Button, Typography, Box, Paper } from "@mui/material";
 
 const ProductPage = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [respMsg, setRespMsg] = useState("");
+  const [isError, setIsError] = useState(false);
 
-    const products = [
-        {
-            id: 1,
-            images: [
-                require('./Images/Mobile.jpg'),
-                require('./Images/mobile-2.jpg'),
-                require('./Images/Watch.jfif'),
-            ],
-            name: "Product 1",
-            price: "$10.00",
-            description: "This is a detailed description for product 1.",
-        },
-        {
-            id: 2,
-            images: [
-                require('./Images/mobile-2.jpg'),
-                require('./Images/Mobile.jpg'),
-                require('./Images/Watch.jfif'),
-            ],
-            name: "Product 2",
-            price: "$20.00",
-            description: "This is a detailed description for product 2.",
-        },
-        {
-            id: 3,
-            images: [
-                require('./Images/Watch.jfif'),
-                require('./Images/Mobile.jpg'),
-                require('./Images/mobile-2.jpg'),
-            ],
-            name: "Product 3",
-            price: "$30.00",
-            description: "This is a detailed description for product 3.",
-        },
-        {
-            id: 4,
-            images: [
-                require('./Images/mobile-3.jpg'),
-                require('./Images/Mobile.jpg'),
-                require('./Images/mobile-2.jpg'),
-            ],
-            name: "Product 4",
-            price: "$40.00",
-            description: "This is a detailed description for product 4.",
-        },
-    ];
+  const products = [
+    {
+      id: 1,
+      images: [
+        require("./Images/Mobile.jpg"),
+        require("./Images/mobile-2.jpg"),
+        require("./Images/Watch.jfif"),
+      ],
+      name: "Product 1",
+      price: "$10.00",
+      company: "Dell",
+      description: "This is a detailed description for product 1.",
+    },
+    {
+      id: 2,
+      images: [
+        require("./Images/mobile-2.jpg"),
+        require("./Images/Mobile.jpg"),
+        require("./Images/Watch.jfif"),
+      ],
+      name: "Product 2",
+      price: "$20.00",
+      company: "Dell",
+      description: "This is a detailed description for product 2.",
+    },
+    {
+      id: 3,
+      images: [
+        require("./Images/Watch.jfif"),
+        require("./Images/Mobile.jpg"),
+        require("./Images/mobile-2.jpg"),
+      ],
+      name: "Product 3",
+      price: "$30.00",
+      company: "Dell",
+      description: "This is a detailed description for product 3.",
+    },
+    {
+      id: 4,
+      images: [
+        require("./Images/mobile-3.jpg"),
+        require("./Images/Mobile.jpg"),
+        require("./Images/mobile-2.jpg"),
+      ],
+      name: "Product 4",
+      price: "$40.00",
+      company: "Dell",
+      description: "This is a detailed description for product 4.",
+    },
+  ];
 
-    const product = products.find((prod) => prod.id.toString() === id);
+  const product = products.find((prod) => prod.id.toString() === id);
 
-  
-
-    const imageSectionStyle = {
-        flex: "1",
-    };
-
-
-    const thumbnailsStyle = {
-        display: "flex",
-        gap: "10px",
-        marginTop: "10px",
-    };
-    const containerStyle = {
-        display: "flex",
-        flexWrap: "wrap", // Allows items to wrap to the next line
-        padding: "20px",
-        gap: "20px", // Space between items
-      };
-      
-      const productContainerStyle = {
-        flex: "1 1 calc(25% - 20px)", // Responsive width with margin
-        boxSizing: "border-box",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "10px",
-        marginBottom: "20px",
-        maxWidth: "calc(25% - 20px)", // Ensures items don’t exceed this width
-        height: "500px", // Set a fixed height for the container
-        display: "flex",
-        flexDirection: "column", // Aligns children vertically
-        overflow: "hidden", // Ensures content does not overflow
-      };
-      
-      
-      const mainImageStyle = {
-        width: "100%",
-        height: "auto",
-        maxHeight: "200px", // Fixed height for images
-        objectFit: "cover", // Ensures images cover the area
-        borderRadius: "8px",
-      };
-      
-    
-      
-      const thumbnailImageStyle = {
-        width: "60px",
-        height: "60px",
-        objectFit: "cover",
-        borderRadius: "8px",
-        cursor: "pointer",
-        border: "1px solid #ddd",
-      };
-      
-      const productDetailStyle = {
-        // flex: "1",
-        // padding: "10px",
-        // display: "flex",
-        // flexDirection: "column", // Aligns text vertically
-        // justifyContent: "space-between", // Ensures space between elements
-        // height: "100%", // Makes sure details take the remaining height
-      };
-
-      const containerStyle1 = {
-        display: 'flex',
-        flexDirection: 'row',
-        padding: '20px',
-        gap: '20px',
-        justifyContent: 'center',
-        width: '100%',
-        minHeight: '100vh',
-        boxSizing: 'border-box',
-    };
-    
-    const imageContainerStyle1 = {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        flex: '1',
-    };
-    
-    const mainImageStyle1 = {
-        width: '400px',  // Fixed width
-        height: 'auto',  // Maintain aspect ratio
-        // borderRadius: '8px',
-        // boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-    };
-    
-    const thumbnailContainerStyle1 = {
-        display: 'flex',
-        marginTop: '10px',
-        gap: '10px',
-    };
-    
-    const thumbnailStyle1 = {
-        width: '80px',
-        height: '80px',
-        objectFit: 'cover',
-        // borderRadius: '8px',
-        cursor: 'pointer',
-        // border: '2px solid #ddd',
-        // transition: 'border-color 0.3s',
-    };
-    
-    const thumbnailHoverStyle1 = {
-        ...thumbnailStyle1,
-        // borderColor: '#007bff',
-    };
-    
-    const detailContainerStyle1 = {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        flex: '1',
-        maxWidth: '400px',
-        width: '100%',
-        // padding: '20px',
-        // border: '1px solid #ddd',
-        // borderRadius: '8px',
-        // boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-    };
-    
-    const titleStyle1 = {
-        fontSize: '24px',
-        fontWeight: 'bold',
-        margin: '10px 0',
-    };
-    
-    const priceStyle1 = {
-        fontSize: '20px',
-        color: '#28a745',
-        margin: '10px 0',
-    };
-    
-    const descriptionStyle1 = {
-        fontSize: '16px',
-        color: '#555',
-        marginBottom: '20px',
-    };
-    
-    const cartButtonStyle1 = {
-        backgroundColor: '#007bff',
-        color: '#fff',
-        border: 'none',
-        // borderRadius: '4px',
-        padding: '10px 20px',
-        cursor: 'pointer',
-        fontSize: '16px',
-        transition: 'background-color 0.3s',
-    };
-    
-    const cartButtonHoverStyle1 = {
-        ...cartButtonStyle1,
-        backgroundColor: '#0056b3',
-    };
-    
-    const handleThumbnailClick = (image) => {
-        const mainImage = document.getElementById("mainImage");
-        if (mainImage) {
-            mainImage.src = image;
-        }
-    };
-
-    const handleAddToCart = (id) => {
-        console.log("id", id);
-        if (typeof id === 'object') {
-            const cart = JSON.parse(localStorage.getItem("cart")) || [];
-            cart.push(product);
-            localStorage.setItem("cart", JSON.stringify(cart));
-            navigate("/cart");
-        }
-        else {
-            const matchingProducts = products.filter((prod) => prod.id.toString() === id.toString());
-            const product = matchingProducts.length > 0 ? matchingProducts[0] : null;
-            console.log("Matching product", product)
-            const cart = JSON.parse(localStorage.getItem("cart")) || [];
-            cart.push(product);
-            localStorage.setItem("cart", JSON.stringify(cart));
-            navigate("/cart");
-        }
-    };
-
-
-
-    if (!product) {
-        return (
-            <div style={containerStyle}>
-                {/* <h1>All Products</h1> */}
-                {products.map((prod) => (
-                    <div key={prod.id} style={productContainerStyle}>
-                        <div style={imageSectionStyle}>
-                            <img
-                                src={prod.images[0]}
-                                alt={prod.name}
-                                style={mainImageStyle}
-                            />
-                            <div style={thumbnailsStyle}>
-                                {prod.images.map((image, index) => (
-                                    <img
-                                        key={index}
-                                        src={image}
-                                        alt={`${prod.name} thumbnail ${index + 1}`}
-                                        style={thumbnailImageStyle}
-                                        onClick={() => handleThumbnailClick(image)}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                        <div style={productDetailStyle}>
-                            <h1>{prod.name +"  "+prod.price}</h1>
-                            <p>{prod.description}</p>
-                            <button onClick={() => handleAddToCart(prod.id)}>Add to Cart</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
+  const handleThumbnailClick = (image) => {
+    const mainImage = document.getElementById("mainImage");
+    if (mainImage) {
+      mainImage.src = image;
     }
+  };
 
+  const handleAddToCart = (
+    productName,
+    productPrice,
+    productCampany,
+    productDescription,
+    productImages
+  ) => {
+    let user_id = localStorage.getItem("user");
+    let res = JSON.parse(user_id);
+
+    const formData = new FormData();
+    formData.append("name", productName);
+    formData.append("price", productPrice);
+    formData.append("company", productCampany);
+    formData.append("userId", res?.data?._id);
+    formData.append("productDescription", productDescription);
+    Array.from(productImages).forEach((file) => {
+      formData.append("productImages", file);
+    });
+
+    fetch("http://localhost:5000/products/addProductToCart", {
+      method: "POST",
+      body: formData, // Do not set the content-Type header manually
+    })
+      .then((resp) => resp.json())
+      .then((data) => {
+        setRespMsg(data?.msg);
+        setIsError(data?.err);
+        console.log("addProductToCart called");
+      });
+  };
+
+  const closeAlert = () => {
+    setRespMsg("");
+    setIsError(false);
+  };
+
+  useEffect(() => {
+    let time = 5000;
+    if (isError) {
+      time = 10000;
+    }
+    const timmer = setTimeout(() => {
+      closeAlert();
+    }, time);
+    return () => clearTimeout(timmer);
+  }, [respMsg]);
+
+  if (!product) {
     return (
-        <div style={containerStyle1}>
-            <div style={imageContainerStyle1}>
+      <Grid container spacing={3} padding={3}>
+        <Grid item xs={2}></Grid>
+        <Grid item xs={8}>
+          {respMsg &&
+            (!isError ? (
+              <Alert severity="success" onClose={closeAlert}>
+                {respMsg}
+              </Alert>
+            ) : (
+              <Alert severity="error" onClose={closeAlert}>
+                {respMsg}
+              </Alert>
+            ))}
+        </Grid>
+        <Grid item xs={2}></Grid>
+        {products.map((prod) => (
+          <Grid item xs={12} sm={4} md={3} key={prod.id}>
+            <Paper style={{ borderRadius: "25px", padding: "10px" }}>
+              <Box padding={2}>
                 <img
-                    id="mainImage"
-                    src={product.images[0]}
-                    alt={product.name}
-                    style={mainImageStyle1}
+                  src={prod.images[0]}
+                  alt={prod.name}
+                  style={{
+                    width: "80%",
+                    height: "200px",
+                    // objectFit: "cover",
+                    borderRadius: "8px",
+                  }}
                 />
-                <div style={thumbnailContainerStyle1}>
-                    {product.images.map((image, index) => (
-                        <img
-                            key={index}
-                            src={image}
-                            alt={`${product.name} thumbnail ${index + 1}`}
-                            style={thumbnailStyle1}
-                            onClick={() => handleThumbnailClick(image)}
-                            onMouseOver={(e) => e.currentTarget.style.borderColor = thumbnailHoverStyle1.borderColor}
-                            onMouseOut={(e) => e.currentTarget.style.borderColor = thumbnailStyle1.borderColor}
-                        />
-                    ))}
-                </div>
-            </div>
-            <div style={detailContainerStyle1}>
-                <h1 style={titleStyle1}>{product.name}</h1>
-                <h2 style={priceStyle1}>{product.price}</h2>
-                <p style={descriptionStyle1}>{product.description}</p>
-                <button
-                    style={cartButtonStyle1}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = cartButtonHoverStyle1.backgroundColor}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = cartButtonStyle1.backgroundColor}
-                    onClick={handleAddToCart}
+                <Box display="flex" justifyContent="center" marginTop={1}>
+                  {prod.images.map((image, index) => (
+                    <img
+                      key={index}
+                      src={image}
+                      alt={`${prod.name} thumbnail ${index + 1}`}
+                      style={{
+                        width: "50px",
+                        height: "60px",
+                        objectFit: "cover",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        marginRight: "10px",
+                      }}
+                      onClick={() => handleThumbnailClick(image)}
+                    />
+                  ))}
+                </Box>
+                <Typography variant="h6" gutterBottom>
+                  {prod.name}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  {prod.price}
+                </Typography>
+                <Typography variant="body2" paragraph>
+                  {prod.description}
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() =>
+                    handleAddToCart(
+                      prod.name,
+                      prod.price,
+                      prod?.company,
+                      prod?.description,
+                      prod.images[0]
+                    )
+                  }
                 >
-                    Add to Cart
-                </button>
-            </div>
-        </div>
+                  Add to Cart
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
     );
+  }
+
+  //Single product view
+  return (
+    <Grid container spacing={4} padding={4}>
+      <Grid item xs={12} md={6}>
+        <Box textAlign="center">
+          <img
+            id="mainImage"
+            src={product.images[0]}
+            alt={product.name}
+            style={{
+              width: "100%",
+              maxHeight: "400px",
+              objectFit: "cover",
+              borderRadius: "8px",
+            }}
+          />
+          <Box display="flex" justifyContent="center" marginTop={2}>
+            {product.images.map((image, index) => (
+              <img
+                key={index}
+                src={image}
+                alt={`${product.name} thumbnail ${index + 1}`}
+                style={{
+                  width: "80px",
+                  height: "80px",
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  marginRight: "10px",
+                }}
+                onClick={() => handleThumbnailClick(image)}
+              />
+            ))}
+          </Box>
+        </Box>
+      </Grid>
+
+      <Grid item xs={12} md={6}>
+        <Typography variant="h4" gutterBottom>
+          {product.name}
+        </Typography>
+        <Typography variant="h5" color="text.secondary" gutterBottom>
+          {product.price}
+        </Typography>
+        <Typography variant="body1" paragraph>
+          {product.description}
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => handleAddToCart(product.id)}
+        >
+          Add to Cart
+        </Button>
+      </Grid>
+    </Grid>
+  );
 };
 
 export default ProductPage;
