@@ -9,7 +9,8 @@ module.exports = {
   getProductList,
   deleteProduct,
   editProduct,
-  addProductToCart
+  addProductToCart,
+  getAddedItems
 };
 
 const storage = multer.memoryStorage({
@@ -126,9 +127,13 @@ async function editProduct(req, res) {
   }
 }
 
+function generateRandomID() {
+  return Math.random().toString(36).substr(2, 9); // Generates a random string of 9 characters
+}
 
 async function addProductToCart(req, res) {
   const uploadMiddleware = upload.array('productImages');
+  let product_id = generateRandomID();
 
   try {
     await new Promise((resolve, reject) => {
@@ -154,7 +159,9 @@ async function addProductToCart(req, res) {
       });
     }));
 
+
     const productDoc = {
+      product_id: product_id,
       name: name,
       price: price,
       company: company,
@@ -166,12 +173,73 @@ async function addProductToCart(req, res) {
 
     const conn = await db.connectEcomerceDB();
     const collection = conn.collection(config.ACTIVE_CART);
-    await collection.insertOne(productDoc);
+    let result = await collection.insertOne(productDoc);
 
-    res.json({ error: false, msg: "Item successfully added to your cart" });
+    res.status(200).json({ error: false, msg: "Item successfully added to your cart" });
   } catch (error) {
     console.error("error in addProductToCart ", error);
-    res.json({ error: true, msg: "Something went wrong" });
+    res.status(500).json({ error: true, msg: "Something went wrong" });
   }
-
 }
+
+async function getAddedItems(req, res) {
+  try {
+    const userId = req.params.userId;
+
+    const conn = await db.connectEcomerceDB();
+    const collection = conn.collection(config.ACTIVE_CART);
+
+    const pipeline = [
+      {
+        $match: { userId: userId },
+      },
+      {
+        $group: {
+          _id: "$name",
+          productDetails: { $first: "$$ROOT" },
+          quantity: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          name: "$_id", // Use `_id` (grouped name) as `name`
+          product_id: "$productDetails.product_id",
+          price: "$productDetails.price",
+          company: "$productDetails.company",
+          userId: "$productDetails.userId",
+          productDescription: "$productDetails.productDescription",
+          productImages: { $slice: ["$productDetails.productImages", 1] },
+          quantity: 1,
+        },
+      },
+    ];
+
+    const result = await collection.aggregate(pipeline).toArray();
+
+    if (result.length > 0) {
+      res.status(200).json({
+        result: result,
+        total_items: result.length,
+        msg: "",
+        error: false,
+      });
+    } else {
+      res.status(200).json({
+        result: [],
+        total_items: 0,
+        msg: "Your cart is empty !...",
+        error: false,
+      });
+    }
+  } catch (error) {
+    console.error("Error in getAddedItems", error);
+    res.status(500).json({
+      result: [],
+      total_items: 0,
+      msg: "Error while fetching records!",
+      error: true,
+    });
+  }
+}
+

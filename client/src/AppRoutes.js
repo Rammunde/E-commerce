@@ -15,6 +15,7 @@ const AppRoutes = () => {
   const user = JSON.parse(localStorage.getItem('user'));
   const isAdmin = user?.data?.role === 'Admin';
 
+  console.log("isAdmin",isAdmin)
   return (
     <Routes>
       <Route element={<PrivateComponent />}>

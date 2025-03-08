@@ -53,8 +53,8 @@ const YourComponent = () => {
 
   const RegisterUser = () => {
     setCheckValidate(true);
-    let emailValidate = validateEmail(email);
-    let mobileNumberValidate = validateMobileNo(mobile);
+    // let emailValidate = validateEmail(email);
+    // let mobileNumberValidate = validateMobileNo(mobile);
     if (firstName?.trim() && lastName?.trim() && username?.trim() && mobile.length === 10) {
       fetch("http://localhost:5000/users/register", {
         method: "post",
@@ -134,7 +134,10 @@ const YourComponent = () => {
                 variant="outlined"
                 error={checkValidate ? firstName?.trim() ? false : true : false}
                 value={firstName}
-                onChange={(e) => { setFirstName(e.target.value), setCheckValidate(false) }}
+                onChange={(e) => { 
+                  setFirstName(e.target.value);
+                  setCheckValidate(false)
+                 }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12} sm={6}>
@@ -144,7 +147,8 @@ const YourComponent = () => {
                 variant="outlined"
                 error={checkValidate ? lastName?.trim() ? false : true : false}
                 value={lastName}
-                onChange={(e) => { setLastName(e.target.value), setCheckValidate(false) }}
+                onChange={(e) => { setLastName(e.target.value);
+                   setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12}>
@@ -154,7 +158,8 @@ const YourComponent = () => {
                 variant="outlined"
                 error={checkValidate ? validateEmail(email) : false}
                 value={email}
-                onChange={(e) => { setEmail(e.target.value), setCheckValidate(false) }}
+                onChange={(e) => { setEmail(e.target.value);
+                   setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12}>
@@ -164,7 +169,8 @@ const YourComponent = () => {
                 variant="outlined"
                 error={checkValidate ? validateMobileNo(mobile) : false}
                 value={mobile}
-                onChange={(e) => { setMobile(e.target.value), setCheckValidate(false) }}
+                onChange={(e) => { setMobile(e.target.value);
+                   setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12}>
@@ -174,7 +180,8 @@ const YourComponent = () => {
                 variant="outlined"
                 error={checkValidate ? username?.trim() ? false : true : false}
                 value={username}
-                onChange={(e) => { setUsername(e.target.value), setCheckValidate(false) }}
+                onChange={(e) => { setUsername(e.target.value);
+                   setCheckValidate(false) }}
               />
             </StyledFormElement>
             <StyledFormElement item xs={12}>
@@ -190,7 +197,8 @@ const YourComponent = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        onClick={() => { setShowPassword(!showPassword), setCheckValidate(false) }}
+                        onClick={() => { setShowPassword(!showPassword);
+                           setCheckValidate(false) }}
                         edge="end"
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}

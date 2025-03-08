@@ -124,7 +124,7 @@ async function loginUser(req, res) {
     const collection = await ecomDB.connectUsersDB();
 
     if (normalizedUsername === predefinedUsername && normalizedPassword === predefinedPassword) {
-      const existingUser = await collection.findOne({ username: predefinedUsername });
+      const existingUser = await collection.findOne({ username: predefinedUsername, password: predefinedPassword });
 
       if (!existingUser) {
         const newUser = {

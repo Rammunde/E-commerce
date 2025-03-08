@@ -74,7 +74,7 @@ const ProductPage = () => {
     productPrice,
     productCampany,
     productDescription,
-    productImages
+    product
   ) => {
     let user_id = localStorage.getItem("user");
     let res = JSON.parse(user_id);
@@ -85,20 +85,38 @@ const ProductPage = () => {
     formData.append("company", productCampany);
     formData.append("userId", res?.data?._id);
     formData.append("productDescription", productDescription);
-    Array.from(productImages).forEach((file) => {
-      formData.append("productImages", file);
-    });
 
-    fetch("http://localhost:5000/products/addProductToCart", {
-      method: "POST",
-      body: formData, // Do not set the content-Type header manually
-    })
-      .then((resp) => resp.json())
+    Promise.all(
+      product.images.map((image, index) =>
+        fetch(image)
+          .then((res) => res.blob())
+          .then((blob) => {
+            const file = new File([blob], `image-${index + 1}.jpg`, { type: blob.type });
+            formData.append("productImages", file);
+          })
+      )
+    )
+      .then(() => {
+        // Log form data to verify
+        for (let pair of formData.entries()) {
+          console.log(`${pair[0]}: ${pair[1]}`);
+        }
+    
+        // Send form data to the server
+        return fetch("http://localhost:5000/products/addProductToCart", {
+          method: "POST",
+          body: formData,
+        });
+      })
+      .then((res) => res.json())
       .then((data) => {
         setRespMsg(data?.msg);
         setIsError(data?.err);
-        console.log("addProductToCart called");
-      });
+        console.log(data);})
+      .catch((err) => {
+        setRespMsg("Failed to add product to the cart");
+        setIsError(true);
+        console.error("Error:", err)});
   };
 
   const closeAlert = () => {
@@ -107,7 +125,7 @@ const ProductPage = () => {
   };
 
   useEffect(() => {
-    let time = 5000;
+    let time = 7000;
     if (isError) {
       time = 10000;
     }
@@ -184,7 +202,7 @@ const ProductPage = () => {
                       prod.price,
                       prod?.company,
                       prod?.description,
-                      prod.images[0]
+                      prod
                     )
                   }
                 >
@@ -248,7 +266,15 @@ const ProductPage = () => {
         <Button
           variant="contained"
           color="primary"
-          onClick={() => handleAddToCart(product.id)}
+          onClick={() =>
+            handleAddToCart(
+              product.name,
+              product.price,
+              product?.company,
+              product.description,
+              product
+            )
+          }
         >
           Add to Cart
         </Button>

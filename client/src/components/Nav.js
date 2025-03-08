@@ -44,7 +44,7 @@ const Nav = () => {
   return (
     <div
       style={{
-        background: "skyblue",
+        background: "#dad2e1",
         paddingTop: "5px",
         paddingBottom: "10px",
       }}

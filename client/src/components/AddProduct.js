@@ -21,6 +21,7 @@ const AddProduct = () => {
     let id = JSON.parse(user_id);
     setUserId(id?.data?._id);
 
+    console.log("productImages from admin", productImages)
     const formData = new FormData();
     formData.append("name", productName);
     formData.append("price", productPrice);
