@@ -1,14 +1,14 @@
-import { configureStore } from '@reduxjs/toolkit';
-import appReducer from './appSlice';
+import { configureStore } from "@reduxjs/toolkit";
+import appReducer from "./appSlice";
 
 // Load state from localStorage
 const loadState = () => {
   try {
-    const serializedState = localStorage.getItem('appState');
+    const serializedState = localStorage.getItem("appState");
     if (serializedState === null) return undefined;
     return JSON.parse(serializedState);
   } catch (e) {
-    console.warn('Could not load state', e);
+    console.warn("Could not load state", e);
     return undefined;
   }
 };
@@ -17,9 +17,9 @@ const loadState = () => {
 const saveState = (state) => {
   try {
     const serializedState = JSON.stringify(state.app);
-    localStorage.setItem('appState', serializedState);
+    localStorage.setItem("appState", serializedState);
   } catch (e) {
-    console.warn('Could not save state', e);
+    console.warn("Could not save state", e);
   }
 };
 
