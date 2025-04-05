@@ -2,26 +2,21 @@ import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from '../redux/appSlice';
 
 const Nav = () => {
+  const dispatch = useDispatch();
+  const totalAddedItems = useSelector((state) => state.app.totalItems);
   const user = JSON.parse(localStorage.getItem("user"));
   const isAdmin = user?.data?.role === "Admin";
   const auth = localStorage.getItem("user");
   const fullName =
     JSON.parse(auth)?.data?.firstName + " " + JSON.parse(auth)?.data?.lastName;
   const navigate = useNavigate();
-  const [cartItemCount, setCartItemCount] = React.useState(3);
-
-  const fetchCartItemCount = () => {
-    const cart = JSON.parse(localStorage.getItem("cart"));
-    setCartItemCount(cart ? cart.length : 0);
-  };
-
-  React.useEffect(() => {
-    fetchCartItemCount();
-  }, []);
 
   const logOut = () => {
+    dispatch(logout());
     localStorage.clear();
     navigate("/login");
   };
@@ -165,7 +160,7 @@ const Nav = () => {
                 }
               >
                 <FontAwesomeIcon icon={faCartShopping} size="lg" />
-                {cartItemCount > 0 && (
+                {totalAddedItems > 0 && (
                   <span
                     style={{
                       position: "relative",
@@ -179,7 +174,7 @@ const Nav = () => {
                       fontWeight: "bold",
                     }}
                   >
-                    {cartItemCount}
+                    {totalAddedItems}
                   </span>
                 )}
               </NavLink>

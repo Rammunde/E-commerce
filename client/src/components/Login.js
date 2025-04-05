@@ -1,9 +1,22 @@
 import React, { useState } from "react";
 import { styled } from "@mui/material/styles";
-import { TextField, Button, Paper, Container, Grid, IconButton, InputAdornment, Typography, Alert } from "@mui/material";
+import {
+  TextField,
+  Button,
+  Paper,
+  Container,
+  Grid,
+  IconButton,
+  InputAdornment,
+  Typography,
+  Alert,
+} from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
+import { getTotalAddedItems } from "../commonApi";
+import { useDispatch } from "react-redux";
+import { setTotalItems } from "../redux/appSlice";
 
 // Define styles using MUI v5 styled API
 const useStyles = styled({
@@ -43,6 +56,7 @@ const useStyles = styled({
 const LoginPage = () => {
   const classes = useStyles();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -70,9 +84,10 @@ const LoginPage = () => {
           if (data.err === false) {
             localStorage.setItem("user", JSON.stringify(data));
             localStorage.setItem("userId", data?.data?._id);
-            if(data?.data?.role === "Admin"){
+            fetchData(data?.data?._id);
+            if (data?.data?.role === "Admin") {
               navigate("/admin");
-            }else{
+            } else {
               navigate("/");
             }
           } else {
@@ -83,6 +98,12 @@ const LoginPage = () => {
     }
   };
 
+  const fetchData = async (userId) => {
+    const total = await getTotalAddedItems(userId); // Pass userId
+    console.log("res", total);
+    dispatch(setTotalItems(total)); // Update Redux state
+  };
+
   const handleCloseReportUserManagement = () => {
     setRespMsg("");
   };
@@ -91,9 +112,25 @@ const LoginPage = () => {
     <Container
       component="main"
       maxWidth="xs"
-      sx={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 8 }}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        marginTop: 8,
+      }}
     >
-      <Paper elevation={3} sx={{ padding: "32px 24px", display: "flex", flexDirection: "column", alignItems: "center", borderRadius: 2, width: "100%", marginTop: 8 }}>
+      <Paper
+        elevation={3}
+        sx={{
+          padding: "32px 24px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          borderRadius: 2,
+          width: "100%",
+          marginTop: 8,
+        }}
+      >
         <Grid container spacing={2}>
           {respMsg && (
             <Grid item xs={12}>
@@ -126,7 +163,13 @@ const LoginPage = () => {
                     fullWidth
                     label="Username"
                     variant="outlined"
-                    error={checkValidate ? username?.trim()?.length > 0 ? false : true : false}
+                    error={
+                      checkValidate
+                        ? username?.trim()?.length > 0
+                          ? false
+                          : true
+                        : false
+                    }
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="off"
@@ -138,7 +181,13 @@ const LoginPage = () => {
                     fullWidth
                     label="Password"
                     variant="outlined"
-                    error={checkValidate ? password?.length > 0 ? false : true : false}
+                    error={
+                      checkValidate
+                        ? password?.length > 0
+                          ? false
+                          : true
+                        : false
+                    }
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -152,7 +201,7 @@ const LoginPage = () => {
                             {showPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
                         </InputAdornment>
-                      )
+                      ),
                     }}
                     autoComplete="off"
                     name="password"
@@ -166,7 +215,9 @@ const LoginPage = () => {
                     className={classes.appButton}
                     variant="outlined"
                     color="primary"
-                    onClick={() => { setCheckValidate(false) }}
+                    onClick={() => {
+                      setCheckValidate(false);
+                    }}
                   >
                     Cancel
                   </Button>

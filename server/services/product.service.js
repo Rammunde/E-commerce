@@ -127,13 +127,8 @@ async function editProduct(req, res) {
   }
 }
 
-function generateRandomID() {
-  return Math.random().toString(36).substr(2, 9); // Generates a random string of 9 characters
-}
-
 async function addProductToCart(req, res) {
   const uploadMiddleware = upload.array('productImages');
-  let product_id = generateRandomID();
 
   try {
     await new Promise((resolve, reject) => {
@@ -143,7 +138,15 @@ async function addProductToCart(req, res) {
       });
     });
 
-    const { name, price, company, userId, productDescription } = req.body;
+    const { product_id, name, price, company, userId, productDescription } = req.body;
+    const conn = await db.connectEcomerceDB();
+    const collection = conn.collection(config.ACTIVE_CART);
+    const exist = await collection.findOne({ product_id });
+    if (exist) {
+      return res.status(200).json({ error: false, msg: "Item already present in your cart" });
+    }
+
+
     const files = req.files || [];
     const base64Images = await Promise.all(files.map(file => {
       if (!file.buffer) {
@@ -171,8 +174,6 @@ async function addProductToCart(req, res) {
       registrationDate: new Date(),
     };
 
-    const conn = await db.connectEcomerceDB();
-    const collection = conn.collection(config.ACTIVE_CART);
     let result = await collection.insertOne(productDoc);
 
     res.status(200).json({ error: false, msg: "Item successfully added to your cart" });

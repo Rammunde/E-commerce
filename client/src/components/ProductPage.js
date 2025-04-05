@@ -2,8 +2,11 @@ import React, { useEffect, useState } from "react";
 import Alert from "@mui/material/Alert";
 import { useParams, useNavigate } from "react-router-dom";
 import { Grid, Button, Typography, Box, Paper } from "@mui/material";
+import { useDispatch } from "react-redux";
+import { updateGlobalItemCount } from "../commonApi";
 
 const ProductPage = () => {
+  const dispatch = useDispatch();
   const { id } = useParams();
   const navigate = useNavigate();
   const [respMsg, setRespMsg] = useState("");
@@ -11,7 +14,7 @@ const ProductPage = () => {
 
   const products = [
     {
-      id: 1,
+      id: 'P1',
       images: [
         require("./Images/Mobile.jpg"),
         require("./Images/mobile-2.jpg"),
@@ -23,7 +26,7 @@ const ProductPage = () => {
       description: "This is a detailed description for product 1.",
     },
     {
-      id: 2,
+      id: 'P2',
       images: [
         require("./Images/mobile-2.jpg"),
         require("./Images/Mobile.jpg"),
@@ -35,7 +38,7 @@ const ProductPage = () => {
       description: "This is a detailed description for product 2.",
     },
     {
-      id: 3,
+      id: 'P3',
       images: [
         require("./Images/Watch.jfif"),
         require("./Images/Mobile.jpg"),
@@ -47,7 +50,7 @@ const ProductPage = () => {
       description: "This is a detailed description for product 3.",
     },
     {
-      id: 4,
+      id: 'P4',
       images: [
         require("./Images/mobile-3.jpg"),
         require("./Images/Mobile.jpg"),
@@ -70,6 +73,7 @@ const ProductPage = () => {
   };
 
   const handleAddToCart = (
+    product_id,
     productName,
     productPrice,
     productCampany,
@@ -80,6 +84,7 @@ const ProductPage = () => {
     let res = JSON.parse(user_id);
 
     const formData = new FormData();
+    formData.append('product_id', product_id);
     formData.append("name", productName);
     formData.append("price", productPrice);
     formData.append("company", productCampany);
@@ -112,12 +117,14 @@ const ProductPage = () => {
       .then((data) => {
         setRespMsg(data?.msg);
         setIsError(data?.err);
+        updateGlobalItemCount(res?.data?._id, dispatch)
         console.log(data);})
       .catch((err) => {
         setRespMsg("Failed to add product to the cart");
         setIsError(true);
         console.error("Error:", err)});
   };
+
 
   const closeAlert = () => {
     setRespMsg("");
@@ -198,6 +205,7 @@ const ProductPage = () => {
                   color="primary"
                   onClick={() =>
                     handleAddToCart(
+                      prod.id,
                       prod.name,
                       prod.price,
                       prod?.company,
@@ -268,6 +276,7 @@ const ProductPage = () => {
           color="primary"
           onClick={() =>
             handleAddToCart(
+              product.id,
               product.name,
               product.price,
               product?.company,
