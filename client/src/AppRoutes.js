@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import PrivateComponent from "./components/PrivateComponent";
 import HomePage from "./components/Home";
 import ProductPage from "./components/ProductPage";
-import Container from "./components/Container";
+import Container from "./components/container/Container";
 import AddProduct from "./components/AddProduct";
 import ContactUs from "./components/ContactUs/ContactUs";
 import AdminPanel from "./components/AdminPanel";

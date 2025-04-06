@@ -10,7 +10,9 @@ module.exports = {
   deleteProduct,
   editProduct,
   addProductToCart,
-  getAddedItems
+  getAddedItems,
+  removeAddedItems,
+  IncreaseDecreaseItems
 };
 
 const storage = multer.memoryStorage({
@@ -241,6 +243,43 @@ async function getAddedItems(req, res) {
       msg: "Error while fetching records!",
       error: true,
     });
+  }
+}
+
+async function removeAddedItems(req, res) {
+  try {
+    const { product_id, userId } = req.body;
+    const conn = await db.connectEcomerceDB();
+    const collection = conn.collection(config.ACTIVE_CART);
+    const result = await collection.deleteOne(
+      {
+        product_id: product_id
+      },
+      {
+        userId: userId
+      }
+    )
+    res.status(200).json({ msg: "Product removed successfully", err: false });
+  } catch (error) {
+    console.log("Error in removeAddedItems");
+    res.status(500).json({ msg: "Error occured while removing item", err: true });
+  }
+}
+
+async function IncreaseDecreaseItems(req, res) {
+  try {
+    const { product_id, userId, plus, minus } = req.body;
+    const conn = await db.connectEcomerceDB();
+    const collection = conn.collection(config.ACTIVE_CART);
+
+    const incrementValue = plus ? 1 : minus ? -1 : 0;
+    let result = collection.updateOne(
+      { product_id, userId },
+      { $inc: { quantity: incrementValue } });
+      
+    res.status(200).json({ msg: "", err: false });
+  } catch (error) {
+    res.status(200).json({ msg: "error in increaseDecreaseItems", err: true });
   }
 }
 
