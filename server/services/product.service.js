@@ -174,6 +174,7 @@ async function addProductToCart(req, res) {
       productDescription: productDescription,
       productImages: base64Images, // Base64-encoded images
       registrationDate: new Date(),
+      quantity: 1
     };
 
     let result = await collection.insertOne(productDoc);
@@ -196,26 +197,26 @@ async function getAddedItems(req, res) {
       {
         $match: { userId: userId },
       },
-      {
-        $group: {
-          _id: "$name",
-          productDetails: { $first: "$$ROOT" },
-          quantity: { $sum: 1 },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          name: "$_id", // Use `_id` (grouped name) as `name`
-          product_id: "$productDetails.product_id",
-          price: "$productDetails.price",
-          company: "$productDetails.company",
-          userId: "$productDetails.userId",
-          productDescription: "$productDetails.productDescription",
-          productImages: { $slice: ["$productDetails.productImages", 1] },
-          quantity: 1,
-        },
-      },
+      // {
+      //   $group: {
+      //     _id: "$name",
+      //     productDetails: { $first: "$$ROOT" },
+      //     quantity: { $sum: 1 },
+      //   },
+      // },
+      // {
+      //   $project: {
+      //     _id: 0,
+      //     name: "$_id", // Use `_id` (grouped name) as `name`
+      //     product_id: "$productDetails.product_id",
+      //     price: "$productDetails.price",
+      //     company: "$productDetails.company",
+      //     userId: "$productDetails.userId",
+      //     productDescription: "$productDetails.productDescription",
+      //     productImages: { $slice: ["$productDetails.productImages", 1] },
+      //     quantity: 1,
+      //   },
+      // },
     ];
 
     const result = await collection.aggregate(pipeline).toArray();
@@ -273,10 +274,14 @@ async function IncreaseDecreaseItems(req, res) {
     const collection = conn.collection(config.ACTIVE_CART);
 
     const incrementValue = plus ? 1 : minus ? -1 : 0;
-    let result = collection.updateOne(
+    await collection.updateOne(
       { product_id, userId },
       { $inc: { quantity: incrementValue } });
-      
+
+    let updateResult = await collection.findOne({ product_id, userId });
+    if (updateResult && updateResult.quantity <= 0) {
+      await collection.deleteOne({ product_id, userId });
+    }
     res.status(200).json({ msg: "", err: false });
   } catch (error) {
     res.status(200).json({ msg: "error in increaseDecreaseItems", err: true });

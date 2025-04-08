@@ -76,7 +76,7 @@ const Cart = () => {
   };
 
   const getAddedItems = useCallback(() => {
-    setLoading(true);
+    // setLoading(true);
     let userId = localStorage.getItem("userId");
     fetch(`http://localhost:5000/products/getAddedItems/${userId}`, {
       method: "get",
@@ -84,6 +84,7 @@ const Cart = () => {
     })
       .then((resp) => resp.json())
       .then((data) => {
+        console.log("data", data.result);
         let updatedResult = data.result.map((record) => {
           const price = parseFloat(record.price.replace(/[^0-9.-]+/g, ""));
           const discount = price * 0.1; // 10% discount
@@ -114,9 +115,9 @@ const Cart = () => {
 
   return (
     <Box p={4}>
-      <Typography variant="h5" mb={2}>
+      {/* <Typography variant="h5" mb={2}>
         Your Cart
-      </Typography>
+      </Typography> */}
       {loading ? ( // Show loader if loading is true
         <Box
           display="flex"
@@ -186,7 +187,7 @@ const Cart = () => {
                           <RemoveIcon />
                         </IconButton>
                         <Typography variant="body1" mx={1}>
-                          {item?.quantity}
+                          {item?.quantity ? item?.quantity : 1}
                         </Typography>
                         <IconButton
                           size="small"
