@@ -1,20 +1,27 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Alert from "@mui/material/Alert";
-import { useParams, useNavigate } from "react-router-dom";
-import { Grid, Button, Typography, Box, Paper } from "@mui/material";
+import {
+  Grid,
+  Button,
+  Typography,
+  Box,
+  Paper
+} from "@mui/material";
 import { useDispatch } from "react-redux";
 import { updateGlobalItemCount } from "../commonApi";
+import { Snackbar } from "@mui/material";
+import CustomizedInputBase from "./ProductUtils/CustomizedInputBase";
 
 const ProductPage = () => {
   const dispatch = useDispatch();
-  const { id } = useParams();
-  const navigate = useNavigate();
   const [respMsg, setRespMsg] = useState("");
-  const [isError, setIsError] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [severity, setSeverity] = useState("success");
+  const [searchProduct, setSearchProduct] = useState("");
 
   const products = [
     {
-      id: 'P1',
+      id: "P1",
       images: [
         require("./Images/Mobile.jpg"),
         require("./Images/mobile-2.jpg"),
@@ -26,7 +33,7 @@ const ProductPage = () => {
       description: "This is a detailed description for product 1.",
     },
     {
-      id: 'P2',
+      id: "P2",
       images: [
         require("./Images/mobile-2.jpg"),
         require("./Images/Mobile.jpg"),
@@ -38,7 +45,7 @@ const ProductPage = () => {
       description: "This is a detailed description for product 2.",
     },
     {
-      id: 'P3',
+      id: "P3",
       images: [
         require("./Images/Watch.jfif"),
         require("./Images/Mobile.jpg"),
@@ -50,7 +57,7 @@ const ProductPage = () => {
       description: "This is a detailed description for product 3.",
     },
     {
-      id: 'P4',
+      id: "P4",
       images: [
         require("./Images/mobile-3.jpg"),
         require("./Images/Mobile.jpg"),
@@ -63,7 +70,13 @@ const ProductPage = () => {
     },
   ];
 
-  const product = products.find((prod) => prod.id.toString() === id);
+  const filteredProducts = products.filter((prod) =>
+    prod.name.toLowerCase().includes(searchProduct.toLowerCase())
+  );
+
+  const handleClose = () => {
+    setOpen(false);
+  };
 
   const handleThumbnailClick = (image) => {
     const mainImage = document.getElementById("mainImage");
@@ -84,7 +97,7 @@ const ProductPage = () => {
     let res = JSON.parse(user_id);
 
     const formData = new FormData();
-    formData.append('product_id', product_id);
+    formData.append("product_id", product_id);
     formData.append("name", productName);
     formData.append("price", productPrice);
     formData.append("company", productCampany);
@@ -96,7 +109,9 @@ const ProductPage = () => {
         fetch(image)
           .then((res) => res.blob())
           .then((blob) => {
-            const file = new File([blob], `image-${index + 1}.jpg`, { type: blob.type });
+            const file = new File([blob], `image-${index + 1}.jpg`, {
+              type: blob.type,
+            });
             formData.append("productImages", file);
           })
       )
@@ -106,7 +121,7 @@ const ProductPage = () => {
         for (let pair of formData.entries()) {
           console.log(`${pair[0]}: ${pair[1]}`);
         }
-    
+
         // Send form data to the server
         return fetch("http://localhost:5000/products/addProductToCart", {
           method: "POST",
@@ -116,178 +131,107 @@ const ProductPage = () => {
       .then((res) => res.json())
       .then((data) => {
         setRespMsg(data?.msg);
-        setIsError(data?.err);
-        updateGlobalItemCount(res?.data?._id, dispatch)
-        console.log(data);})
+        updateGlobalItemCount(res?.data?._id, dispatch);
+        setSeverity("success");
+        setOpen(true);
+      })
       .catch((err) => {
         setRespMsg("Failed to add product to the cart");
-        setIsError(true);
-        console.error("Error:", err)});
+        setSeverity("error");
+        setOpen(true);
+        console.error("Error:", err);
+      });
   };
 
-
-  const closeAlert = () => {
-    setRespMsg("");
-    setIsError(false);
-  };
-
-  useEffect(() => {
-    let time = 7000;
-    if (isError) {
-      time = 10000;
-    }
-    const timmer = setTimeout(() => {
-      closeAlert();
-    }, time);
-    return () => clearTimeout(timmer);
-  }, [respMsg]);
-
-  if (!product) {
-    return (
-      <Grid container spacing={3} padding={3}>
-        <Grid item xs={2}></Grid>
-        <Grid item xs={8}>
-          {respMsg &&
-            (!isError ? (
-              <Alert severity="success" onClose={closeAlert}>
-                {respMsg}
-              </Alert>
-            ) : (
-              <Alert severity="error" onClose={closeAlert}>
-                {respMsg}
-              </Alert>
-            ))}
-        </Grid>
-        <Grid item xs={2}></Grid>
-        {products.map((prod) => (
-          <Grid item xs={12} sm={4} md={3} key={prod.id}>
-            <Paper style={{ borderRadius: "25px", padding: "10px" }}>
-              <Box padding={2}>
-                <img
-                  src={prod.images[0]}
-                  alt={prod.name}
-                  style={{
-                    width: "80%",
-                    height: "200px",
-                    // objectFit: "cover",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Box display="flex" justifyContent="center" marginTop={1}>
-                  {prod.images.map((image, index) => (
-                    <img
-                      key={index}
-                      src={image}
-                      alt={`${prod.name} thumbnail ${index + 1}`}
-                      style={{
-                        width: "50px",
-                        height: "60px",
-                        objectFit: "cover",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        marginRight: "10px",
-                      }}
-                      onClick={() => handleThumbnailClick(image)}
-                    />
-                  ))}
-                </Box>
-                <Typography variant="h6" gutterBottom>
-                  {prod.name}
-                </Typography>
-                <Typography variant="subtitle1" gutterBottom>
-                  {prod.price}
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  {prod.description}
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() =>
-                    handleAddToCart(
-                      prod.id,
-                      prod.name,
-                      prod.price,
-                      prod?.company,
-                      prod?.description,
-                      prod
-                    )
-                  }
-                >
-                  Add to Cart
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
-    );
-  }
-
-  //Single product view
   return (
-    <Grid container spacing={4} padding={4}>
-      <Grid item xs={12} md={6}>
-        <Box textAlign="center">
-          <img
-            id="mainImage"
-            src={product.images[0]}
-            alt={product.name}
-            style={{
-              width: "100%",
-              maxHeight: "400px",
-              objectFit: "cover",
-              borderRadius: "8px",
-            }}
-          />
-          <Box display="flex" justifyContent="center" marginTop={2}>
-            {product.images.map((image, index) => (
-              <img
-                key={index}
-                src={image}
-                alt={`${product.name} thumbnail ${index + 1}`}
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  marginRight: "10px",
-                }}
-                onClick={() => handleThumbnailClick(image)}
-              />
-            ))}
-          </Box>
-        </Box>
+    <Grid container spacing={3} padding={3}>
+      <Grid container justifyContent="center" alignItems="center" mt={3} mb={2}>
+        <Grid item xs={12} sm={8}>
+          <CustomizedInputBase onSearch={setSearchProduct} />{" "}
+          {
+            // Used for the search functionality
+          }{" "}
+        </Grid>
       </Grid>
 
-      <Grid item xs={12} md={6}>
-        <Typography variant="h4" gutterBottom>
-          {product.name}
-        </Typography>
-        <Typography variant="h5" color="text.secondary" gutterBottom>
-          {product.price}
-        </Typography>
-        <Typography variant="body1" paragraph>
-          {product.description}
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() =>
-            handleAddToCart(
-              product.id,
-              product.name,
-              product.price,
-              product?.company,
-              product.description,
-              product
-            )
-          }
+      <Grid item xs={8}>
+        <Snackbar
+          open={open}
+          autoHideDuration={3000}
+          onClose={handleClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          Add to Cart
-        </Button>
+          <Alert
+            onClose={handleClose}
+            severity={severity}
+            sx={{ width: "100%" }}
+          >
+            {respMsg}
+          </Alert>
+        </Snackbar>
       </Grid>
+      <Grid item xs={2}></Grid>
+      {filteredProducts.map((prod) => (
+        <Grid item xs={12} sm={4} md={3} key={prod.id}>
+          <Paper style={{ borderRadius: "25px", padding: "10px" }}>
+            <Box padding={2}>
+              <img
+                src={prod.images[0]}
+                alt={prod.name}
+                style={{
+                  width: "80%",
+                  height: "200px",
+                  // objectFit: "cover",
+                  borderRadius: "8px",
+                }}
+              />
+              <Box display="flex" justifyContent="center" marginTop={1}>
+                {prod.images.map((image, index) => (
+                  <img
+                    key={index}
+                    src={image}
+                    alt={`${prod.name} thumbnail ${index + 1}`}
+                    style={{
+                      width: "50px",
+                      height: "60px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      marginRight: "10px",
+                    }}
+                    onClick={() => handleThumbnailClick(image)}
+                  />
+                ))}
+              </Box>
+              <Typography variant="h6" gutterBottom>
+                {prod.name}
+              </Typography>
+              <Typography variant="subtitle1" gutterBottom>
+                {prod.price}
+              </Typography>
+              <Typography variant="body2" paragraph>
+                {prod.description}
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() =>
+                  handleAddToCart(
+                    prod.id,
+                    prod.name,
+                    prod.price,
+                    prod?.company,
+                    prod?.description,
+                    prod
+                  )
+                }
+              >
+                Add to Cart
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+      ))}
     </Grid>
   );
 };

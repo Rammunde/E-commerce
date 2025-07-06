@@ -39,7 +39,7 @@ const Nav = () => {
   return (
     <div
       style={{
-        background: "#dad2e1",
+        background: "#626467", // Navbar color
         paddingTop: "5px",
         paddingBottom: "10px",
       }}
