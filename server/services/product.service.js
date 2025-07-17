@@ -12,7 +12,8 @@ module.exports = {
   addProductToCart,
   getAddedItems,
   removeAddedItems,
-  IncreaseDecreaseItems
+  IncreaseDecreaseItems,
+  updatePriceTypeScript
 };
 
 const storage = multer.memoryStorage({
@@ -46,7 +47,7 @@ async function addProduct(req, res) {
       });
     });
 
-    const { name, price, company, userId, productDescription } = req.body;
+    const { name, price, originalPrice, company, userId, productDescription } = req.body;
     const files = req.files || [];
     const base64Images = await Promise.all(files.map(file => {
       if (!file.buffer) {
@@ -64,7 +65,8 @@ async function addProduct(req, res) {
 
     const productDoc = {
       name: name,
-      price: price,
+      price: parseFloat(price),
+      originalPrice: parseFloat(originalPrice),
       company: company,
       userId: userId,
       productDescription: productDescription,
@@ -117,9 +119,10 @@ async function editProduct(req, res) {
   const { productId, name, company, price, userId } = req.body;
 
   const collection = await db.connectProductsDb();
+  const convertedPrices = parseFloat(price);
   let result = await collection.updateOne(
     { _id: new ObjectId(productId) },
-    { $set: { name, price, company, userId } }
+    { $set: { name, price: convertedPrices, originalPrice: convertedPrices, company, userId } }
   );
   if (result.modifiedCount > 0) {
     res.status(200).json({ err: false, msg: "Product Updated successfully" });
@@ -140,10 +143,10 @@ async function addProductToCart(req, res) {
       });
     });
 
-    const { product_id, name, price, company, userId, productDescription } = req.body;
+    const { product_id, name, price, company, userId, productDescription, originalPrice } = req.body;
     const conn = await db.connectEcomerceDB();
     const collection = conn.collection(config.ACTIVE_CART);
-    const exist = await collection.findOne({ product_id });
+    const exist = await collection.findOne({ product_id, userId });
     if (exist) {
       return res.status(200).json({ error: false, msg: "Item already present in your cart" });
     }
@@ -168,7 +171,8 @@ async function addProductToCart(req, res) {
     const productDoc = {
       product_id: product_id,
       name: name,
-      price: price,
+      price: parseFloat(price),
+      originalPrice: parseFloat(originalPrice),
       company: company,
       userId: userId,
       productDescription: productDescription,
@@ -267,24 +271,50 @@ async function removeAddedItems(req, res) {
   }
 }
 
+async function updatePriceTypeScript() {
+  try {
+    const conn = await db.connectEcomerceDB();
+    const collection = conn.collection(config.ACTIVE_CART);
+
+    const cursor = collection.find({ price: { $type: "string" } });
+
+    for await (const doc of cursor) {
+      const numericPrice = parseFloat(doc.price);
+      if (!isNaN(numericPrice)) {
+        await collection.updateOne(
+          { _id: doc._id },
+          { $set: { price: numericPrice } }
+        );
+      }
+    }
+
+    console.log("Price field updated to numeric where necessary.");
+  } catch (error) {
+    console.error("Error updating price type:", error);
+  }
+}
+
 async function IncreaseDecreaseItems(req, res) {
   try {
-    const { product_id, userId, plus, minus } = req.body;
+
+    const { product_id, userId, plus, minus, originalPrice } = req.body;
     const conn = await db.connectEcomerceDB();
     const collection = conn.collection(config.ACTIVE_CART);
 
     const incrementValue = plus ? 1 : minus ? -1 : 0;
+
+    const convertPriceType = parseFloat(originalPrice);
+    const updatePrice = plus ? convertPriceType : minus ? -convertPriceType : 0
     await collection.updateOne(
       { product_id, userId },
-      { $inc: { quantity: incrementValue } });
+      { $inc: { quantity: incrementValue, price: updatePrice } });
 
     let updateResult = await collection.findOne({ product_id, userId });
     if (updateResult && updateResult.quantity <= 0) {
       await collection.deleteOne({ product_id, userId });
     }
-    res.status(200).json({ msg: "", err: false });
+    res.status(200).json({ msg: "Succesfully update count", err: false });
   } catch (error) {
-    res.status(200).json({ msg: "error in increaseDecreaseItems", err: true });
+    res.status(400).json({ msg: "error in increaseDecreaseItems", err: true });
   }
 }
-

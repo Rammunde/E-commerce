@@ -46,9 +46,6 @@ const Cart = () => {
       // });
   };
 
-  const handleIncreaseDecreaseItems = (item) => {
-  
-  };
 
   const handleQuantityChange = (item, flag) => {
     fetch(`http://localhost:5000/products/IncreaseDecreaseItems`, {
@@ -57,6 +54,8 @@ const Cart = () => {
       body: JSON.stringify({
         product_id: item.product_id,
         userId: item.userId,
+        price: item.price,
+        originalPrice: item.originalPrice,
         plus: flag ? true : false,
         minus: flag ? false : true
       }),
@@ -86,7 +85,7 @@ const Cart = () => {
       .then((data) => {
         console.log("data", data.result);
         let updatedResult = data.result.map((record) => {
-          const price = parseFloat(record.price.replace(/[^0-9.-]+/g, ""));
+          const price = record.price;
           const discount = price * 0.1; // 10% discount
           const finalPrice = price - discount;
 

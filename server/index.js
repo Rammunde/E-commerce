@@ -64,6 +64,7 @@ const bodyParser = require('body-parser');
 const userRoutes = require('./userRoutes');
 const productRoutes = require('./productRoutes');
 require('./db/config');
+const {updatePriceTypeScript }= require('./services/product.service')
 
 const app = express();
 
@@ -75,6 +76,8 @@ app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 // Route handlers
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
+
+updatePriceTypeScript()
 
 // Start server
 const PORT = process.env.PORT || 5000;
