@@ -2,10 +2,12 @@ const ecomDB = require("../db/dbConnection");
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const { ObjectId } = require('mongodb');
+require('dotenv').config();
 
 module.exports = {
   registerUser,
   getAllUsers,
+  getAllAvailableUsers, //POST API
   loginUser,
   deleteUser,
   editUser,
@@ -50,6 +52,49 @@ async function getAllUsers(req, res) {
     res.status(500).json({ error: "Internal Server Error" });
   }
 }
+
+async function getAllAvailableUsers(req, res) {
+  try {
+    const { searchString = "", sortBy = 'name', sortOrder = 'asc' } = req.body;
+    const collection = await ecomDB.connectUsersDB();
+    let andArray = [{}];
+
+    if (searchString) {
+      andArray.push({ name: { $regex: searchString, $options: "i" } })
+    }
+
+    const pipeline = [
+      {
+        $addFields: {
+          name: { $concat: ["$firstName", " ", "$lastName"] }
+        }
+      }
+    ];
+
+    if (andArray.length > 0) {
+      pipeline.push({ $match: { $and: andArray } });
+    }
+
+    pipeline.push({$sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 }});
+
+    const users = await collection.aggregate(pipeline).toArray();
+
+    let totalCount = 0;
+    if (users.length > 0) {
+      totalCount = users.length;
+    }
+
+    res.json({
+      data: users,
+      totalCount: totalCount,
+      msg: "Users Retrieved Successfully",
+    });
+  } catch (error) {
+    console.error("Error retrieving users:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}
+
 
 
 async function deleteUser(req, res) {
@@ -167,30 +212,29 @@ async function loginUser(req, res) {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: "rammunde9834@gmail.com",
-    pass: "ijvp kbee sfka wpqw",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   },
 });
 
 
-async function sendMailToOwner(req, res){
+async function sendMailToOwner(req, res) {
   const { name, mobileNo, emailId, message } = req.body;
-try{
-  const mailOptions = {
-    from: emailId,
-    to: 'rammunde9834@gmail.com', // Replace with your email address
-    subject: `Contact Us Message from ${name}`,
-    text: `Name: ${name}\nEmail: ${emailId}\nPhone: ${mobileNo}\nMessage: ${message}`,
-  };
+  try {
+    const mailOptions = {
+      from: emailId,
+      to: emailId, // Replace with your email address
+      subject: `Contact Us Message from ${name}`,
+      text: `Name: ${name}\nPhone: ${mobileNo}\nMessage: ${message}`,
+    };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      return res.status(500).json({err: true, msg: error.toString() });
-    }
-    return res.status(200).json({err: false, msg: "Message Send Successfully" });
-  });
-}catch(err){
-  console.log(err);
-}
-  
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return res.status(500).json({ err: true, msg: error.toString() });
+      }
+      return res.status(200).json({ err: false, msg: "Message Send Successfully" });
+    });
+  } catch (err) {
+    console.log(err);
+  }
 }
