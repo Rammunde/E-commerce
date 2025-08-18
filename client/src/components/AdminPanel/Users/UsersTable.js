@@ -19,16 +19,18 @@ import {
   Tooltip,
   Alert,
   Pagination,
+  Typography,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchField from "./SearchField";
+import NewUserCreation from "./NewUserCreation";
 
 const useStyles = makeStyles((theme) => ({
   layoutSetting: {
-    marginTop: "2rem",
+    marginTop: "2rem"
   },
 }));
 
@@ -58,6 +60,7 @@ const UsersTable = () => {
 
   const initialSearchRender = useRef(true);
   const [users, setUsers] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [rowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -74,6 +77,8 @@ const UsersTable = () => {
   const [error, setError] = useState(false);
   const [searchString, setSearchString] = useState("");
   const [nameList, setNameList] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [userData, setUserData] = useState({});
 
   console.log("searchString", searchString);
   const getAllUserList = () => {
@@ -89,6 +94,7 @@ const UsersTable = () => {
       .then((resp) => resp.json())
       .then((data) => {
         setUsers(data?.data);
+        setTotalCount(data?.totalCount);
         const names = data.data.map((record) => record.name);
         setNameList(names);
       });
@@ -113,6 +119,8 @@ const UsersTable = () => {
   };
 
   const handleEditUser = (user) => {
+    setUserData(user);
+    setOpen(true);
     setUserFirstName(user?.firstName);
     setUserLastName(user?.lastName);
     setUserName(user?.username);
@@ -177,17 +185,71 @@ const UsersTable = () => {
     setError(false);
   };
 
+  const handleOnClose = () => {
+    setOpen(false);
+  };
+
   return (
     <Container component="main" maxWidth="md" className={classes.layoutSetting}>
+      {open && (
+        <NewUserCreation
+          open={open}
+          userData={userData}
+          onResult={(action, boolean) => {
+            if (action === "success") {
+              getAllUserList();
+            }
+            setOpen(boolean);
+          }}
+        />
+      )}
       <Grid style={{ paddingBottom: "2rem" }}>
+        <Typography variant="h6" color={"#525861ff"}>
+          {" "}
+          Users List (
+          <span style={{ color: "#969ca5ff" }}>{totalCount} Users</span>)
+        </Typography>
+      </Grid>
+      <Grid
+        style={{
+          paddingBottom: "2rem",
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
         <SearchField
           label={"Search by name"}
           setSearchString={setSearchString}
           namesList={nameList}
         />
+
+        <Grid style={{ marginTop: "0.5rem" }}>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            style={{ width: "10rem", height: "2.5rem", marginRight: "0.5rem" }}
+            onClick={() => {
+              setOpen(true);
+              setUserData({});
+            }}
+          >
+            Add New User
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            style={{ width: "10rem", height: "2.5rem" }}
+            // onClick={}
+          >
+            Export
+          </Button>
+        </Grid>
       </Grid>
+
       <Paper elevation={3} style={{ padding: "1rem", borderRadius: "0.5rem" }}>
-        <TableContainer>
+        <TableContainer style={{ maxHeight: 500, overflow: "auto" }}>
           <Table style={table} aria-label="users table">
             <TableHead>
               <TableRow>
@@ -216,7 +278,7 @@ const UsersTable = () => {
                     <TableCell>{user.email}</TableCell>
                     <TableCell align="right">
                       <IconButton
-                        onClick={(e) => handleUserMenuClick(e, user?._id)}
+                        onClick={(e) => handleUserMenuClick(e, user?._id)} color="primary"
                       >
                         <MoreVertIcon />
                       </IconButton>
@@ -225,12 +287,22 @@ const UsersTable = () => {
                         open={Boolean(anchorEl) && currentUserId === user?._id}
                         onClose={() => setAnchorEl(null)}
                       >
-                        <MenuItem onClick={() => handleEditUser(user)}>
+                        <MenuItem
+                          onClick={() => {
+                            handleEditUser(user);
+                            setAnchorEl(null);
+                          }}
+                        >
                           <Tooltip title="Edit">
                             <EditIcon color="primary" />
                           </Tooltip>
                         </MenuItem>
-                        <MenuItem onClick={() => handleDeleteUser(user?._id)}>
+                        <MenuItem
+                          onClick={() => {
+                            handleDeleteUser(user?._id);
+                            setAnchorEl(null);
+                          }}
+                        >
                           <Tooltip title="Delete">
                             <DeleteIcon color="primary" />
                           </Tooltip>
@@ -257,7 +329,7 @@ const UsersTable = () => {
       </Paper>
 
       {/* Edit User Modal */}
-      <Modal style={modal} open={openUserModal} onClose={handleCloseUserModal}>
+      {/* <Modal style={modal} open={openUserModal} onClose={handleCloseUserModal}>
         <Fade in={openUserModal}>
           <div style={modalContent}>
             <Grid container spacing={2}>
@@ -375,7 +447,7 @@ const UsersTable = () => {
             </Grid>
           </div>
         </Fade>
-      </Modal>
+      </Modal> */}
     </Container>
   );
 };

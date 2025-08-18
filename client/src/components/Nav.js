@@ -42,6 +42,10 @@ const Nav = () => {
         background: "#626467", // Navbar color
         paddingTop: "5px",
         paddingBottom: "10px",
+        position: "sticky",
+top: 0,
+zIndex: 1000
+
       }}
     >
       <div

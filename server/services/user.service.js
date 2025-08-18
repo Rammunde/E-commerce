@@ -75,7 +75,7 @@ async function getAllAvailableUsers(req, res) {
       pipeline.push({ $match: { $and: andArray } });
     }
 
-    pipeline.push({$sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 }});
+    pipeline.push({ $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } });
 
     const users = await collection.aggregate(pipeline).toArray();
 
@@ -120,38 +120,35 @@ async function deleteUser(req, res) {
 }
 
 async function editUser(req, res) {
-  const {
-    userId,
-    firstName,
-    lastName,
-    username,
-    password,
-    email,
-    mobile } = req.body;
+  try {
+    const {
+      userId,
+      firstName,
+      lastName,
+      username,
+      password,
+      email,
+      mobile } = req.body;
 
-  const collection = await ecomDB.connectUsersDB();
-  if (!userId) {
-    return res.status(400).json({ err: true, msg: 'Invalid user ID' });
-  }
+    const collection = await ecomDB.connectUsersDB();
+    if (!userId) {
+      return res.status(400).json({ err: true, msg: 'Invalid user ID' });
+    }
 
-  const userUpdate = {
-    firstName,
-    lastName,
-    username,
-    password,
-    email,
-    mobile
-  };
+    const userUpdate = {
+      firstName,
+      lastName,
+      username,
+      password,
+      email,
+      mobile
+    };
 
-  const result = await collection.updateOne(
-    { _id: new ObjectId(userId) },
-    { $set: userUpdate }
-  );
+    const result = await collection.updateOne({ _id: new ObjectId(userId) }, { $set: userUpdate });
 
-  if (result.modifiedCount > 0) {
     res.status(200).json({ err: false, msg: "User Updated successfully" });
-  }
-  else {
+
+  } catch (error) {
     res.status(500).json({ err: true, msg: "Internal Server Error" });
   }
 }
@@ -175,10 +172,10 @@ async function loginUser(req, res) {
         const newUser = {
           firstName: "Ram",
           lastName: "Munde",
-          email: "rammunde9834@gmail.com",
+          email: "defaultuser@gmail.com",
           username: predefinedUsername,
           password: predefinedPassword,
-          mobile: "9834631497",
+          mobile: "9172123412",
           role: "Admin"
         };
         await collection.insertOne(newUser);
