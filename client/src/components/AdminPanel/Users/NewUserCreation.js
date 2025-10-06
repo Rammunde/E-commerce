@@ -51,11 +51,13 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => {} }) => {
   };
 
   const callApi = () => {
+    const fullName = userFirstName +" "+ userLastName;
     if (editUserId === 0) {
       fetch("http://localhost:5000/users/register", {
         method: "post",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          fullName,
           firstName: userFirstName,
           lastName: userLastName,
           email: userEmail,
@@ -77,6 +79,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => {} }) => {
         method: "post",
         headers: { "content-Type": "application/json" },
         body: JSON.stringify({
+          fullName,
           userId: editUserId,
           firstName: userFirstName,
           lastName: userLastName,

@@ -13,11 +13,7 @@ import {
   Menu,
   MenuItem,
   IconButton,
-  TextField,
-  Fade,
-  Modal,
   Tooltip,
-  Alert,
   Pagination,
   Typography,
 } from "@mui/material";
@@ -30,7 +26,7 @@ import NewUserCreation from "./NewUserCreation";
 
 const useStyles = makeStyles((theme) => ({
   layoutSetting: {
-    marginTop: "2rem"
+    marginTop: "2rem",
   },
 }));
 
@@ -41,18 +37,6 @@ const tableHeaderCell = {
   position: "sticky",
   top: 0,
   zIndex: 1,
-};
-const paper = { padding: "10px" };
-const modal = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-const modalContent = {
-  backgroundColor: "#fff",
-  boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
-  padding: "16px 16px 24px 16px",
-  width: "400px",
 };
 
 const UsersTable = () => {
@@ -65,28 +49,19 @@ const UsersTable = () => {
   const [rowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(0);
-  const [openUserModal, setOpenUserModal] = useState(false);
-  const [userFirstName, setUserFirstName] = useState("");
-  const [userLastName, setUserLastName] = useState("");
-  const [userName, setUserName] = useState("");
-  const [password, setPassword] = useState("***********");
-  const [userEmail, setUserEmail] = useState("");
-  const [editUserId, setEditingUserId] = useState(0);
-  const [userMobile, setUserMobile] = useState("");
-  const [respMsgOnEdit, setRespMsgOnEdit] = useState("");
-  const [error, setError] = useState(false);
   const [searchString, setSearchString] = useState("");
   const [nameList, setNameList] = useState([]);
   const [open, setOpen] = useState(false);
   const [userData, setUserData] = useState({});
 
-  console.log("searchString", searchString);
   const getAllUserList = () => {
     fetch("http://localhost:5000/users/getAllAvailableUsers", {
       method: "post",
       headers: { "content-Type": "application/json" },
       body: JSON.stringify({
         searchString: searchString,
+        limit: 10,
+        offset: 0,
         sortBy: "name",
         sortOrder: "asc",
       }),
@@ -95,7 +70,7 @@ const UsersTable = () => {
       .then((data) => {
         setUsers(data?.data);
         setTotalCount(data?.totalCount);
-        const names = data.data.map((record) => record.name);
+        const names = data?.data?.map((record) => record.name);
         setNameList(names);
       });
   };
@@ -121,14 +96,6 @@ const UsersTable = () => {
   const handleEditUser = (user) => {
     setUserData(user);
     setOpen(true);
-    setUserFirstName(user?.firstName);
-    setUserLastName(user?.lastName);
-    setUserName(user?.username);
-    setUserEmail(user?.email);
-    setPassword(user?.password);
-    setUserMobile(user?.mobile);
-    setEditingUserId(user?._id);
-    setOpenUserModal(true);
   };
 
   const handleDeleteUser = (userId) => {
@@ -142,51 +109,56 @@ const UsersTable = () => {
       });
   };
 
-  const handleCloseUserModal = () => {
-    setAnchorEl(null);
-    setOpenUserModal(false);
-  };
-
-  const saveEditUser = () => {
-    fetch("http://localhost:5000/users/editUser", {
+const handleExport =()=>{
+    fetch("http://localhost:5000/users/getAllUserToExport", {
       method: "post",
       headers: { "content-Type": "application/json" },
       body: JSON.stringify({
-        userId: editUserId,
-        firstName: userFirstName,
-        lastName: userLastName,
-        username: userName,
-        password: password,
-        email: userEmail,
-        mobile: userMobile,
+        searchString: searchString,
+        limit: 10, // Consider removing this for a full export
+        offset: 0, // Consider removing this
+        sortBy: "name",
+        sortOrder: "asc",
       }),
     })
       .then((resp) => resp.json())
       .then((data) => {
-        getAllUserList();
-        setError(false);
-        setRespMsgOnEdit(data?.msg);
-        if (!data?.err) {
-          setTimeout(() => {
-            setRespMsgOnEdit("");
-            setError(false);
-            setOpenUserModal(false);
-          }, 1000);
+        // Step 1: Check if data is valid and has at least one item
+        if (!data || data.data.length === 0) {
+          console.error("No data to export.");
+          return;
         }
+
+        // Step 2: Extract headers from the first object
+        const headers = Object.keys(data.data[0]);
+        const csvHeaders = headers.join(',');
+
+        // Step 3: Map data to CSV rows
+        const csvRows = data.data.map(row => {
+          return headers.map(header => `"${row[header]}"`).join(',');
+        });
+
+        // Step 4: Combine headers and rows into a single CSV string
+        const csvContent = [csvHeaders, ...csvRows].join('\n');
+
+        // Step 5: Create a Blob and download link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'Users csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      })
+      .catch(error => {
+        console.error("Error exporting data:", error);
       });
-  };
+  }
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
-  };
-
-  const handleClose = () => {
-    setRespMsgOnEdit("");
-    setError(false);
-  };
-
-  const handleOnClose = () => {
-    setOpen(false);
   };
 
   return (
@@ -241,7 +213,7 @@ const UsersTable = () => {
             variant="contained"
             color="primary"
             style={{ width: "10rem", height: "2.5rem" }}
-            // onClick={}
+            onClick={handleExport}
           >
             Export
           </Button>
@@ -278,7 +250,8 @@ const UsersTable = () => {
                     <TableCell>{user.email}</TableCell>
                     <TableCell align="right">
                       <IconButton
-                        onClick={(e) => handleUserMenuClick(e, user?._id)} color="primary"
+                        onClick={(e) => handleUserMenuClick(e, user?._id)}
+                        color="primary"
                       >
                         <MoreVertIcon />
                       </IconButton>
@@ -320,134 +293,13 @@ const UsersTable = () => {
           style={{ marginTop: "16px", paddingBottom: "16px" }}
         >
           <Pagination
-            count={Math.ceil(users.length / rowsPerPage)}
+            count={Math.ceil(users?.length / rowsPerPage)}
             page={page}
             onChange={handleChangePage}
             color="primary"
           />
         </Grid>
       </Paper>
-
-      {/* Edit User Modal */}
-      {/* <Modal style={modal} open={openUserModal} onClose={handleCloseUserModal}>
-        <Fade in={openUserModal}>
-          <div style={modalContent}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                {respMsgOnEdit && (
-                  <Alert
-                    onClose={handleClose}
-                    severity={error ? "error" : "success"}
-                    style={{ marginBottom: "16px" }}
-                  >
-                    {respMsgOnEdit}
-                  </Alert>
-                )}
-              </Grid>
-              <Grid item xs={12}>
-                <h1>Edit User</h1>
-                <form>
-                  <Paper elevation={4} style={paper}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <TextField
-                          fullWidth
-                          label="First Name"
-                          variant="outlined"
-                          value={userFirstName}
-                          onChange={(e) => setUserFirstName(e.target.value)}
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          fullWidth
-                          label="Last Name"
-                          variant="outlined"
-                          value={userLastName}
-                          onChange={(e) => setUserLastName(e.target.value)}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Mobile Number"
-                          variant="outlined"
-                          value={userMobile}
-                          type="number"
-                          inputProps={{ maxLength: 10 }}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (/^\d*$/.test(value) && value.length <= 10) {
-                              setUserMobile(value);
-                            }
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="UserName"
-                          variant="outlined"
-                          value={userName}
-                          onChange={(e) => setUserName(e.target.value)}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Password"
-                          variant="outlined"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Email"
-                          variant="outlined"
-                          value={userEmail}
-                          onChange={(e) => setUserEmail(e.target.value)}
-                        />
-                      </Grid>
-                    </Grid>
-                    <Grid container spacing={2} style={{ paddingTop: "10px" }}>
-                      <Grid item xs={6}>
-                        <Button
-                          fullWidth
-                          variant="outlined"
-                          color="primary"
-                          onClick={handleCloseUserModal}
-                        >
-                          Cancel
-                        </Button>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          color="primary"
-                          disabled={
-                            userMobile?.length !== 10 ||
-                            !userName ||
-                            !password ||
-                            !userFirstName ||
-                            !userLastName ||
-                            !userEmail
-                          }
-                          onClick={saveEditUser}
-                        >
-                          Save
-                        </Button>
-                      </Grid>
-                    </Grid>
-                  </Paper>
-                </form>
-              </Grid>
-            </Grid>
-          </div>
-        </Fade>
-      </Modal> */}
     </Container>
   );
 };
