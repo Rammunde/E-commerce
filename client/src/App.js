@@ -14,7 +14,7 @@ function App() {
           <AppRoutes /> {/* Use the AppRoutes component here */}
         </div>
       </BrowserRouter>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

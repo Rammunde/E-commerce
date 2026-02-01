@@ -11,23 +11,71 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
+import { updateGlobalItemCount } from "../../commonApi";
+import { useDispatch } from "react-redux";
 
 const Cart = () => {
+  const dispatch = useDispatch();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true); // Loader state
-  const [respMsg, setRespMsg] = useState('');
+  const [respMsg, setRespMsg] = useState("");
   const [isError, setIsError] = useState(false);
 
-  const handleRemove = (id) => {
-    setCartItems(cartItems.filter((item) => item.id !== id));
+  const handleRemove = (item) => {
+    fetch(`http://localhost:5000/products/removeAddedItems`, {
+      method: "POST",
+      headers: { "content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: item.product_id,
+        userId: item.userId,
+      }),
+    })
+      .then((resp) => resp.json())
+      .then((data) => {
+        console.log("Product removed successfully");
+        const user_id = localStorage.getItem('user');
+        const id = JSON.parse(user_id);
+        updateGlobalItemCount(id?.data?._id, dispatch);
+        getAddedItems();
+      })
+      .catch((error) => {
+        console.log("error in remove", error);
+      })
+    // .finally(() => {
+    //   setLoading(false);
+    // });
   };
 
-  const handleQuantityChange = (id, increment) => {
-    // Logic for updating quantity goes here
+
+  const handleQuantityChange = (item, flag) => {
+    fetch(`http://localhost:5000/products/IncreaseDecreaseItems`, {
+      method: "POST",
+      headers: { "content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: item.product_id,
+        userId: item.userId,
+        price: item.price,
+        originalPrice: item.originalPrice,
+        plus: flag ? true : false,
+        minus: flag ? false : true
+      }),
+    })
+      .then((resp) => resp.json())
+      .then((data) => {
+        console.log("Product removed successfully");
+        const user_id = localStorage.getItem('user');
+        const id = JSON.parse(user_id);
+        updateGlobalItemCount(id?.data?._id, dispatch);
+        getAddedItems();
+      })
+      .catch((error) => {
+        console.log("error in remove", error);
+      })
+
   };
 
   const getAddedItems = useCallback(() => {
-    setLoading(true); // Show loader before fetching data
+    // setLoading(true);
     let userId = localStorage.getItem("userId");
     fetch(`http://localhost:5000/products/getAddedItems/${userId}`, {
       method: "get",
@@ -35,8 +83,9 @@ const Cart = () => {
     })
       .then((resp) => resp.json())
       .then((data) => {
-        let updatedResult = data.result.map(record => {
-          const price = parseFloat(record.price.replace(/[^0-9.-]+/g, ""));
+        console.log("data", data.result);
+        let updatedResult = data.result.map((record) => {
+          const price = record.price;
           const discount = price * 0.1; // 10% discount
           const finalPrice = price - discount;
 
@@ -55,28 +104,38 @@ const Cart = () => {
         setIsError(true);
       })
       .finally(() => {
-        setLoading(false); // Hide loader after data is fetched
+        setLoading(false);
       });
   }, []);
 
   useEffect(() => {
     getAddedItems();
+    const user_id = localStorage.getItem('user');
+    const id = JSON.parse(user_id);
+    updateGlobalItemCount(id?.data?._id, dispatch);
   }, [getAddedItems]);
 
   return (
     <Box p={4}>
-      <Typography variant="h5" mb={2}>
+      {/* <Typography variant="h5" mb={2}>
         Your Cart
-      </Typography>
+      </Typography> */}
       {loading ? ( // Show loader if loading is true
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="50vh"
+        >
           <CircularProgress />
         </Box>
+      ) : cartItems.length === 0 ? (
+        <Typography variant="body1" fontWeight="bold" color="primary">
+          Your cart is empty
+        </Typography>
       ) : (
-        cartItems.length === 0 ?
-          (<Typography variant="body1" fontWeight="bold" color="primary">
-            Your cart is empty
-          </Typography>) : <><Grid container spacing={2}>
+        <>
+          <Grid container spacing={2}>
             {/* Cart Items */}
             <Grid item xs={12} md={8}>
               {cartItems.map((item) => (
@@ -96,7 +155,13 @@ const Cart = () => {
                       <Typography variant="subtitle1" fontWeight="bold">
                         {item.name}
                       </Typography>
-                      <Typography color={item.stock === "Out of Stock" ? "error" : "success.main"}>
+                      <Typography
+                        color={
+                          item.stock === "Out of Stock"
+                            ? "error"
+                            : "success.main"
+                        }
+                      >
                         {item.stock}
                       </Typography>
                       <Typography variant="body2">
@@ -106,7 +171,11 @@ const Cart = () => {
 
                     {/* Price and Actions */}
                     <Grid item xs={3}>
-                      <Typography variant="body1" fontWeight="bold" color="primary">
+                      <Typography
+                        variant="body1"
+                        fontWeight="bold"
+                        color="primary"
+                      >
                         {item.finalPrice}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -115,16 +184,16 @@ const Cart = () => {
                       <Box display="flex" alignItems="center" mt={1}>
                         <IconButton
                           size="small"
-                          onClick={() => handleQuantityChange(item.id, false)}
+                          onClick={() => handleQuantityChange(item, false)}
                         >
                           <RemoveIcon />
                         </IconButton>
                         <Typography variant="body1" mx={1}>
-                          {item?.quantity}
+                          {item?.quantity ? item?.quantity : 1}
                         </Typography>
                         <IconButton
                           size="small"
-                          onClick={() => handleQuantityChange(item.id, true)}
+                          onClick={() => handleQuantityChange(item, true)}
                         >
                           <AddIcon />
                         </IconButton>
@@ -134,7 +203,7 @@ const Cart = () => {
                         <Button
                           size="small"
                           color="error"
-                          onClick={() => handleRemove(item.id)}
+                          onClick={() => handleRemove(item)}
                         >
                           Remove
                         </Button>
@@ -186,7 +255,8 @@ const Cart = () => {
                 </Button>
               </Paper>
             </Grid>
-          </Grid></>
+          </Grid>
+        </>
       )}
     </Box>
   );

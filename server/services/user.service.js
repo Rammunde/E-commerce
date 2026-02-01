@@ -2,10 +2,13 @@ const ecomDB = require("../db/dbConnection");
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const { ObjectId } = require('mongodb');
+require('dotenv').config();
 
 module.exports = {
   registerUser,
   getAllUsers,
+  getAllAvailableUsers, //POST API
+  getAllUserToExport,
   loginUser,
   deleteUser,
   editUser,
@@ -14,15 +17,25 @@ module.exports = {
 
 async function registerUser(req, res) {
   try {
-    const collection = await ecomDB.connectUsersDB();
+    const userCollection = await ecomDB.connectUsersDB();
+    const { fullName, email, username } = req.body;
+    const isDuplicateFieldExist = await verifyAlreadyExist(fullName, email, username, userCollection);
+    if (isDuplicateFieldExist) {
+      return res.status(400).json({ data: [], msg: 'Duplicate data are not allowed please check fields between name, email and username', err: true });
+    }
     const newUser = req.body;
-    await collection.insertOne(newUser);
+    await userCollection.insertOne(newUser);
 
-    res.json({ data: newUser, msg: "User Registered Successfully" });
+    return res.status(200).json({ data: newUser, msg: "User Registered Successfully", err: false });
   } catch (error) {
     console.error("Error registering user:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error", err: true });
   }
+}
+
+async function verifyAlreadyExist(fullName, email, username, userCollection) {
+  const isExist = await userCollection.findOne({ $or: [{ fullName }, { email }, { username }] });
+  return !!isExist;
 }
 
 async function getAllUsers(req, res) {
@@ -42,6 +55,48 @@ async function getAllUsers(req, res) {
     }
     res.json({
       data: users,
+      totalCount: totalCount, 
+      msg: "Users Retrieved Successfully",
+    });
+  } catch (error) {
+    console.error("Error retrieving users:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}
+
+async function getAllAvailableUsers(req, res) {
+  try {
+    const { searchString = "", sortBy = 'name', sortOrder = 'asc', limit = 10, offset = 0 } = req.body;
+    const collection = await ecomDB.connectUsersDB();
+    let andArray = [{}];
+
+    if (searchString) {
+      andArray.push({ name: { $regex: searchString, $options: "i" } })
+    }
+
+    const pipeline = [
+      {
+        $addFields: {
+          name: { $concat: ["$firstName", " ", "$lastName"] }
+        }
+      }
+    ];
+
+    if (andArray.length > 0) {
+      pipeline.push({ $match: { $and: andArray } });
+    }
+
+    pipeline.push({ $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } });
+
+    const users = await collection.aggregate(pipeline).toArray();
+
+    let totalCount = 0;
+    if (users.length > 0) {
+      totalCount = users.length;
+    }
+
+    res.json({
+      data: users,
       totalCount: totalCount,
       msg: "Users Retrieved Successfully",
     });
@@ -50,6 +105,60 @@ async function getAllUsers(req, res) {
     res.status(500).json({ error: "Internal Server Error" });
   }
 }
+
+async function getAllUserToExport(req, res) {
+  try {
+    const { searchString = "", sortBy = 'name', sortOrder = 'asc' } = req.body;
+    const collection = await ecomDB.connectUsersDB();
+    let andArray = [{}];
+
+    if (searchString) {
+      andArray.push({ name: { $regex: searchString, $options: "i" } })
+    }
+
+    const pipeline = [
+      {
+        $addFields: {
+          name: { $concat: ["$firstName", " ", "$lastName"] }
+        }
+      }
+    ];
+
+    if (andArray.length > 0) {
+      pipeline.push({ $match: { $and: andArray } });
+    }
+
+    pipeline.push({ $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
+      { $project: { _id: 0, name: 1, username: 1, mobile: 1, email: 1 } });
+
+    const users = await collection.aggregate(pipeline).toArray();
+    const mapUsers = [];
+
+    for (element of users) {
+      let obj = {};
+      obj['Name'] = element.name;
+      obj['User Name'] = element.username;
+      obj['Mobile'] = element.mobile;
+      obj['Email'] = element.email;
+      mapUsers.push(obj);
+    }
+
+    let totalCount = 0;
+    if (users.length > 0) {
+      totalCount = users.length;
+    }
+
+    res.json({
+      data: mapUsers,
+      totalCount: totalCount,
+      msg: "Users Retrieved Successfully",
+    });
+  } catch (error) {
+    console.error("Error retrieving users:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}
+
 
 
 async function deleteUser(req, res) {
@@ -75,38 +184,35 @@ async function deleteUser(req, res) {
 }
 
 async function editUser(req, res) {
-  const {
-    userId,
-    firstName,
-    lastName,
-    username,
-    password,
-    email,
-    mobile } = req.body;
+  try {
+    const {
+      userId,
+      firstName,
+      lastName,
+      username,
+      password,
+      email,
+      mobile } = req.body;
 
-  const collection = await ecomDB.connectUsersDB();
-  if (!userId) {
-    return res.status(400).json({ err: true, msg: 'Invalid user ID' });
-  }
+    const collection = await ecomDB.connectUsersDB();
+    if (!userId) {
+      return res.status(400).json({ err: true, msg: 'Invalid user ID' });
+    }
 
-  const userUpdate = {
-    firstName,
-    lastName,
-    username,
-    password,
-    email,
-    mobile
-  };
+    const userUpdate = {
+      firstName,
+      lastName,
+      username,
+      password,
+      email,
+      mobile
+    };
 
-  const result = await collection.updateOne(
-    { _id: new ObjectId(userId) },
-    { $set: userUpdate }
-  );
+    const result = await collection.updateOne({ _id: new ObjectId(userId) }, { $set: userUpdate });
 
-  if (result.modifiedCount > 0) {
     res.status(200).json({ err: false, msg: "User Updated successfully" });
-  }
-  else {
+
+  } catch (error) {
     res.status(500).json({ err: true, msg: "Internal Server Error" });
   }
 }
@@ -130,10 +236,11 @@ async function loginUser(req, res) {
         const newUser = {
           firstName: "Ram",
           lastName: "Munde",
-          email: "rammunde9834@gmail.com",
+          fullName: "Ram Munde",
+          email: "defaultuser@gmail.com",
           username: predefinedUsername,
           password: predefinedPassword,
-          mobile: "9834631497",
+          mobile: "9172123412",
           role: "Admin"
         };
         await collection.insertOne(newUser);
@@ -167,30 +274,29 @@ async function loginUser(req, res) {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: "rammunde9834@gmail.com",
-    pass: "ijvp kbee sfka wpqw",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   },
 });
 
 
-async function sendMailToOwner(req, res){
+async function sendMailToOwner(req, res) {
   const { name, mobileNo, emailId, message } = req.body;
-try{
-  const mailOptions = {
-    from: emailId,
-    to: 'rammunde9834@gmail.com', // Replace with your email address
-    subject: `Contact Us Message from ${name}`,
-    text: `Name: ${name}\nEmail: ${emailId}\nPhone: ${mobileNo}\nMessage: ${message}`,
-  };
+  try {
+    const mailOptions = {
+      from: emailId,
+      to: emailId, // Replace with your email address
+      subject: `Contact Us Message from ${name}`,
+      text: `Name: ${name}\nPhone: ${mobileNo}\nMessage: ${message}`,
+    };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      return res.status(500).json({err: true, msg: error.toString() });
-    }
-    return res.status(200).json({err: false, msg: "Message Send Successfully" });
-  });
-}catch(err){
-  console.log(err);
-}
-  
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return res.status(500).json({ err: true, msg: error.toString() });
+      }
+      return res.status(200).json({ err: false, msg: "Message Send Successfully" });
+    });
+  } catch (err) {
+    console.log(err);
+  }
 }

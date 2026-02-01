@@ -3,14 +3,16 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import PrivateComponent from "./components/PrivateComponent";
 import HomePage from "./components/Home";
 import ProductPage from "./components/ProductPage";
-import Container from "./components/Container";
+import Container from "./components/container/Container";
 import AddProduct from "./components/AddProduct";
 import ContactUs from "./components/ContactUs/ContactUs";
-import AdminPanel from "./components/AdminPanel";
+// import AdminPanel from "./components/AdminPanel";
+import UsersTable from "./components/AdminPanel/Users/UsersTable";
+import ProductTable from "./components/AdminPanel/Products/ProductTable";
 import SignUp from "./components/SignUp";
 import Login from './components/Login';
 
-const AppRoutes = () => {
+const AppRoutes = () => {  
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
   const isAdmin = user?.data?.role === 'Admin';
@@ -24,8 +26,8 @@ const AppRoutes = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/product" element={<ProductPage />} />
             <Route path="/product/:id" element={<ProductPage />} />
-            <Route path="/contactUs" element={<ContactUs />} />
-            <Route path="/cart" element={<Container />} />
+            <Route path="/contactUs" element={<ContactUs />} />   
+            <Route path="/cart" element={<Container />} /> 
             <Route path="/logout" element={<h1>Logout products list</h1>} />
             <Route path="/profile" element={<h1>Profile products list</h1>} />
           </>
@@ -33,8 +35,8 @@ const AppRoutes = () => {
 
         {isAdmin && (
           <>
-            <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/addProduct" element={<AddProduct />} />
+            <Route path="/user-management" element={<UsersTable />} />
+            <Route path="/product-management" element={<ProductTable />} />
           </>
         )}
       </Route>

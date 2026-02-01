@@ -18,5 +18,10 @@ router.delete('/deleteProduct/:id', productService.deleteProduct);
 router.post('/editProduct', productService.editProduct);
 router.post('/addProductToCart', productService.addProductToCart);
 router.get('/getAddedItems/:userId', productService.getAddedItems);
+router.post('/removeAddedItems', productService.removeAddedItems);
+router.post('/IncreaseDecreaseItems', productService.IncreaseDecreaseItems);
+router.post('/getAllProductList', productService.getAllProductList);
+router.delete('/deleteProduct/:id', productService.deleteProduct);
+
 
 module.exports = router;

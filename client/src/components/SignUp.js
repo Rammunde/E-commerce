@@ -53,13 +53,12 @@ const YourComponent = () => {
 
   const RegisterUser = () => {
     setCheckValidate(true);
-    // let emailValidate = validateEmail(email);
-    // let mobileNumberValidate = validateMobileNo(mobile);
     if (firstName?.trim() && lastName?.trim() && username?.trim() && mobile.length === 10) {
+      const fullName = firstName +" "+ lastName;
       fetch("http://localhost:5000/users/register", {
         method: "post",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email, mobile, username, password }),
+        body: JSON.stringify({ fullName, firstName, lastName, email, mobile, username, password }),
       })
         .then((resp) => resp.json())
         .then((data) => {

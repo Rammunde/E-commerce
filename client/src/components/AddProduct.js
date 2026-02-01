@@ -24,7 +24,8 @@ const AddProduct = () => {
     console.log("productImages from admin", productImages)
     const formData = new FormData();
     formData.append("name", productName);
-    formData.append("price", productPrice);
+    formData.append("price", Number(productPrice));
+    formData.append('originalPrice', Number(productPrice));
     formData.append("company", productCampany);
     formData.append("userId", userId);
     formData.append("productDescription", productDescription);
@@ -43,17 +44,6 @@ const AddProduct = () => {
       });
   };
 
-  useEffect(() => {
-    fetch("http://localhost:5000/products/getProductList", {
-      method: "get",
-      headers: { "content-Type": "application/json" },
-    })
-      .then((resp) => resp.json())
-      .then((data) => {
-        // setRespMsg(data?.msg);
-        // setIsError(data?.err);
-      });
-  }, []);
 
   const handleCloseResponeMsg = () => {
     setRespMsg("");

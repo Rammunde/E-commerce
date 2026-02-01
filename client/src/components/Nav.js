@@ -39,9 +39,13 @@ const Nav = () => {
   return (
     <div
       style={{
-        background: "#dad2e1",
+        background: "#626467", // Navbar color
         paddingTop: "5px",
         paddingBottom: "10px",
+        position: "sticky",
+top: 0,
+zIndex: 1000
+
       }}
     >
       <div
@@ -97,24 +101,24 @@ const Nav = () => {
               {isAdmin && (
                 <>
                   <NavLink
-                    to="/admin"
+                    to="/user-management"
                     style={({ isActive }) =>
                       isActive
                         ? { ...navLinkStyle, ...activeLinkStyle }
                         : navLinkStyle
                     }
                   >
-                    Admin Panel
+                    User Management
                   </NavLink>
                   <NavLink
-                    to="/addProduct"
+                    to="/product-management"
                     style={({ isActive }) =>
                       isActive
                         ? { ...navLinkStyle, ...activeLinkStyle }
                         : navLinkStyle
                     }
                   >
-                    Add Product
+                    Product Management
                   </NavLink>
                 </>
               )}
