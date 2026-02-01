@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { ObjectId } = require("mongodb");
+const {PRODUCTS, USERS_DB} = require('../common/collectionNames');
 module.exports = {
   addProduct,
   getProductList,
@@ -13,7 +14,9 @@ module.exports = {
   getAddedItems,
   removeAddedItems,
   IncreaseDecreaseItems,
-  updatePriceTypeScript
+  getAllProductList,
+  updatePriceTypeScript,
+  deleteProduct
 };
 
 const storage = multer.memoryStorage({
@@ -316,5 +319,116 @@ async function IncreaseDecreaseItems(req, res) {
     res.status(200).json({ msg: "Succesfully update count", err: false });
   } catch (error) {
     res.status(400).json({ msg: "error in increaseDecreaseItems", err: true });
+  }
+}
+
+async function getAllProductList(req, res) {
+  try {
+    const { searchString = "", sortBy = 'name', sortOrder = 'asc', limit = 10, offset = 0 } = req.body;
+    const collection = await db.connectProductsDb();
+    let andArray = [{}];
+
+    if (searchString) {
+      andArray.push({ name: { $regex: searchString, $options: "i" } })
+    }
+
+    const pipeline = [];
+
+    // Apply filters first
+    if (andArray.length > 0) {
+      pipeline.push({
+        $match: { $and: andArray }
+      });
+    }
+
+    // Convert string userId to ObjectId
+    pipeline.push({
+      $addFields: {
+        userIdObj: {
+          $convert: {
+            input: "$userId",
+            to: "objectId",
+            onError: null,
+            onNull: null
+          }
+        }
+      }
+    });
+
+    // Join with users collection
+    pipeline.push(
+      {
+        $lookup: {
+          from: USERS_DB,
+          localField: "userIdObj",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          product_name: "$user.fullName"
+        }
+      },
+      {
+        $project: {
+          user: 0,
+          userIdObj: 0
+        }
+      }
+    );
+
+
+    pipeline.push({ $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } });
+
+    const productList = await collection.aggregate(pipeline).toArray();
+
+    let totalCount = 0;
+    if (productList.length > 0) {
+      totalCount = productList.length;
+    }
+
+    res.json({
+      productList: productList,
+      totalCount: totalCount,
+      msg: "Product List Retrieved Successfully",
+    });
+  } catch (error) {
+    console.error("Error retrieving product list:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}
+
+
+async function deleteProduct(req, res) {
+  const productId = req.params.id;
+  console.log("productId", productId);
+
+  try {
+        const conn = await db.connectEcomerceDB();
+    const active_cart_collection = conn.collection(config.ACTIVE_CART);
+   const collection = await db.connectProductsDb();
+    // const result = await collection.deleteOne({ _id: userId});
+    const isExist = await collection.findOne({ _id: new ObjectId(productId) });
+    if (isExist) {
+      await collection.deleteOne({
+        _id: new ObjectId(productId),
+      });
+       await active_cart_collection.deleteOne({
+        product_id: productId,
+      });
+      res.status(200).json({ err: false, msg: "Product deleted successfully" });
+    } else {
+      res.status(200).json({ err: true, msg: "Product not exist" });
+    }
+  } catch (error) {
+    console.error("Error while deleting product:", error);
+    res.status(500).json({ err: true, msg: "Internal Server Error" });
   }
 }

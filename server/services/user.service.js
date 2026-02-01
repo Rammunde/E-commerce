@@ -236,6 +236,7 @@ async function loginUser(req, res) {
         const newUser = {
           firstName: "Ram",
           lastName: "Munde",
+          fullName: "Ram Munde",
           email: "defaultuser@gmail.com",
           username: predefinedUsername,
           password: predefinedPassword,

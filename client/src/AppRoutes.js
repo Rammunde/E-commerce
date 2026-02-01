@@ -8,6 +8,7 @@ import AddProduct from "./components/AddProduct";
 import ContactUs from "./components/ContactUs/ContactUs";
 // import AdminPanel from "./components/AdminPanel";
 import UsersTable from "./components/AdminPanel/Users/UsersTable";
+import ProductTable from "./components/AdminPanel/Products/ProductTable";
 import SignUp from "./components/SignUp";
 import Login from './components/Login';
 
@@ -34,8 +35,8 @@ const AppRoutes = () => {
 
         {isAdmin && (
           <>
-            <Route path="/admin" element={<UsersTable />} />
-            <Route path="/addProduct" element={<AddProduct />} />
+            <Route path="/user-management" element={<UsersTable />} />
+            <Route path="/product-management" element={<ProductTable />} />
           </>
         )}
       </Route>

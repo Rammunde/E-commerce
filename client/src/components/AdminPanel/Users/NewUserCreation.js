@@ -7,6 +7,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Typography,
 } from "@mui/material";
 import Alert from "@mui/material/Alert";
 
@@ -51,7 +52,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => {} }) => {
   };
 
   const callApi = () => {
-    const fullName = userFirstName +" "+ userLastName;
+    const fullName = userFirstName + " " + userLastName;
     if (editUserId === 0) {
       fetch("http://localhost:5000/users/register", {
         method: "post",
@@ -110,8 +111,10 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => {} }) => {
         style: { width: "30rem", borderRadius: "0.5rem" },
       }}
     >
-      <DialogTitle style={{ textAlign: "center" }} color={"#525861ff"}>
-        {editUserId === 0 ? "Create New User" : "Edit User"}
+      <DialogTitle style={{ textAlign: "center" }}>
+        <Typography variant="h6" color="primary">
+          {editUserId === 0 ? "Create New User" : "Edit User Details"}
+        </Typography>
       </DialogTitle>
       <DialogContent style={{ paddingTop: "0.5rem" }}>
         <Grid container spacing={2}>

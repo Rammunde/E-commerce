@@ -2,7 +2,6 @@ import { setTotalItems } from "./redux/appSlice";
 export const getTotalAddedItems = async (userId) => {
     try {
     //   let userId = localStorage.getItem("userId");
-    console.log("called")
       const response = await fetch(`http://localhost:5000/products/getAddedItems/${userId}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },

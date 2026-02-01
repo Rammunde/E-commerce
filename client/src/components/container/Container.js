@@ -41,9 +41,9 @@ const Cart = () => {
       .catch((error) => {
         console.log("error in remove", error);
       })
-      // .finally(() => {
-      //   setLoading(false);
-      // });
+    // .finally(() => {
+    //   setLoading(false);
+    // });
   };
 
 
@@ -110,6 +110,9 @@ const Cart = () => {
 
   useEffect(() => {
     getAddedItems();
+    const user_id = localStorage.getItem('user');
+    const id = JSON.parse(user_id);
+    updateGlobalItemCount(id?.data?._id, dispatch);
   }, [getAddedItems]);
 
   return (

@@ -101,24 +101,24 @@ zIndex: 1000
               {isAdmin && (
                 <>
                   <NavLink
-                    to="/admin"
+                    to="/user-management"
                     style={({ isActive }) =>
                       isActive
                         ? { ...navLinkStyle, ...activeLinkStyle }
                         : navLinkStyle
                     }
                   >
-                    Admin Panel
+                    User Management
                   </NavLink>
                   <NavLink
-                    to="/addProduct"
+                    to="/product-management"
                     style={({ isActive }) =>
                       isActive
                         ? { ...navLinkStyle, ...activeLinkStyle }
                         : navLinkStyle
                     }
                   >
-                    Add Product
+                    Product Management
                   </NavLink>
                 </>
               )}

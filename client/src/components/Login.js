@@ -86,7 +86,7 @@ const LoginPage = () => {
             localStorage.setItem("userId", data?.data?._id);
             fetchData(data?.data?._id);
             if (data?.data?.role === "Admin") {
-              navigate("/admin");
+              navigate("/user-management");
             } else {
               navigate("/");
             }

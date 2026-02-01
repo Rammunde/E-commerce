@@ -20,6 +20,7 @@ const ProductPage = () => {
   const [searchProduct, setSearchProduct] = useState("");
   const [allProductList, setAllProductList] = useState([]);
   const [selectedMainImages, setSelectedMainImages] = useState({});
+  const [thumbnailIndex, setThumbnailIndex] = useState({});
 
   useEffect(() => {
     fetch("http://localhost:5000/products/getProductList", {
@@ -45,6 +46,20 @@ const ProductPage = () => {
     }));
   };
 
+  const handlePrev = (productId) => {
+    setThumbnailIndex((prev) => ({
+      ...prev,
+      [productId]: Math.max((prev[productId] || 0) - 1, 0),
+    }));
+  };
+
+  const handleNext = (productId, imagesLength) => {
+    setThumbnailIndex((prev) => ({
+      ...prev,
+      [productId]: Math.min((prev[productId] || 0) + 1, imagesLength - 3),
+    }));
+  };
+
   const handleAddToCart = (
     productId,
     productName,
@@ -61,7 +76,7 @@ const ProductPage = () => {
     formData.append("product_id", productId);
     formData.append("name", productName);
     formData.append("price", productPrice);
-    formData.append('originalPrice', originalPrice);
+    formData.append("originalPrice", originalPrice);
     formData.append("company", productCompany);
     formData.append("userId", res?.data?._id);
     formData.append("productDescription", productDescription);
@@ -136,29 +151,61 @@ const ProductPage = () => {
                   }
                   alt={prod.name}
                   style={{
-                    width: "80%",
+                    width: "100%",
                     height: "200px",
                     borderRadius: "8px",
                   }}
                 />
-                <Box display="flex" justifyContent="center" marginTop={1}>
-                  {prod.productImages?.map((image, index) => (
-                    <img
-                      key={index}
-                      src={image}
-                      alt={`Thumbnail ${index + 1}`}
-                      style={{
-                        width: "50px",
-                        height: "60px",
-                        objectFit: "cover",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        marginRight: "10px",
-                      }}
-                      onClick={() => handleThumbnailClick(prod._id, image)}
-                    />
-                  ))}
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  mt={1}
+                >
+                  <Button
+                    size="small"
+                    onClick={() => handlePrev(prod._id)}
+                    disabled={(thumbnailIndex[prod._id] || 0) === 0}
+                  >
+                    ◀
+                  </Button>
+                  <Box display="flex" overflow="hidden">
+                    {prod.productImages
+                      ?.slice(
+                        thumbnailIndex[prod._id] || 0,
+                        (thumbnailIndex[prod._id] || 0) + 3
+                      )
+                      .map((image, index) => (
+                        <img
+                          key={index}
+                          src={image}
+                          alt={`Thumbnail ${index + 1}`}
+                          style={{
+                            width: "50px",
+                            height: "60px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            marginRight: "8px",
+                          }}
+                          onClick={() => handleThumbnailClick(prod._id, image)}
+                        />
+                      ))}
+                  </Box>
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      handleNext(prod._id, prod.productImages.length)
+                    }
+                    disabled={
+                      (thumbnailIndex[prod._id] || 0) >=
+                      prod.productImages.length - 3
+                    }
+                  >
+                    ▶
+                  </Button>
                 </Box>
+
                 <Typography variant="h6" gutterBottom>
                   {prod.name}
                 </Typography>
