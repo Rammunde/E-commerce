@@ -13,6 +13,7 @@ const router = express.Router();
 const productService = require('./services/product.service');
 
 router.post('/addProduct', productService.addProduct);
+router.put('/updateProduct/:id', productService.updateProduct);
 router.get('/getProductList', productService.getProductList);
 router.delete('/deleteProduct/:id', productService.deleteProduct);
 router.post('/editProduct', productService.editProduct);

@@ -25,6 +25,7 @@ import SearchField from "../Users/SearchField";
 import ProductDialog from "./ProductDialog";
 import { useDispatch } from "react-redux";
 import { updateGlobalItemCount } from "../../../commonApi";
+import ProductImagesDialog from "./ProductImagesDialog";
 
 const useStyles = makeStyles((theme) => ({
   layoutSetting: {
@@ -58,6 +59,17 @@ const UsersTable = () => {
   const [open, setOpen] = useState(false);
   const [productDetails, setProductDetails] = useState({});
   const [mode, setMode] = useState("add");
+  const [openImageDialog, setOpenImageDialog] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
+
+  const handleOpenImages = (images) => {
+    setSelectedImages(images);
+    setOpenImageDialog(true);
+  };
+
+  const handleCloseImages = () => {
+    setOpenImageDialog(false);
+  };
 
   const getAllProductList = () => {
     fetch(`http://localhost:5000/products/getAllProductList`, {
@@ -101,7 +113,7 @@ const UsersTable = () => {
   const handleEdit = (product) => {
     setProductDetails(product);
     setOpen(true);
-    setMode('edit');
+    setMode("edit");
   };
 
   const handleDelete = (Id) => {
@@ -112,12 +124,13 @@ const UsersTable = () => {
       .then((resp) => resp.json())
       .then(() => {
         getAllProductList();
-        const user_id = localStorage.getItem('user');
+        const user_id = localStorage.getItem("user");
         const id = JSON.parse(user_id);
-        updateGlobalItemCount(id?.data?._id, dispatch);      });
+        updateGlobalItemCount(id?.data?._id, dispatch);
+      });
   };
 
-const handleExport =()=>{
+  const handleExport = () => {
     // fetch("http://localhost:5000/users/getAllUserToExport", {
     //   method: "post",
     //   headers: { "content-Type": "application/json" },
@@ -136,19 +149,15 @@ const handleExport =()=>{
     //       console.error("No data to export.");
     //       return;
     //     }
-
     //     // Step 2: Extract headers from the first object
     //     const headers = Object.keys(data.data[0]);
     //     const csvHeaders = headers.join(',');
-
     //     // Step 3: Map data to CSV rows
     //     const csvRows = data.data.map(row => {
     //       return headers.map(header => `"${row[header]}"`).join(',');
     //     });
-
     //     // Step 4: Combine headers and rows into a single CSV string
     //     const csvContent = [csvHeaders, ...csvRows].join('\n');
-
     //     // Step 5: Create a Blob and download link
     //     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     //     const url = URL.createObjectURL(blob);
@@ -163,7 +172,7 @@ const handleExport =()=>{
     //   .catch(error => {
     //     console.error("Error exporting data:", error);
     //   });
-  }
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -171,11 +180,21 @@ const handleExport =()=>{
 
   return (
     <Container component="main" maxWidth="md" className={classes.layoutSetting}>
+      <ProductImagesDialog
+        open={openImageDialog}
+        images={selectedImages}
+        onClose={handleCloseImages}
+      />
+
       {open && (
         <ProductDialog
           open={open}
-          onClose={()=>{setOpen(false); setMode("add"); getAllProductList();}}
-          mode = {mode}
+          onClose={() => {
+            setOpen(false);
+            setMode("add");
+            getAllProductList();
+          }}
+          mode={mode}
           product={productDetails}
         />
       )}
@@ -200,7 +219,7 @@ const handleExport =()=>{
           namesList={[]}
         />
 
-        <Grid style={{ marginTop: "0.5rem", display: "flex" }} >
+        <Grid style={{ marginTop: "0.5rem", display: "flex" }}>
           <Button
             fullWidth
             variant="contained"
@@ -235,6 +254,7 @@ const handleExport =()=>{
                 <TableCell style={tableHeaderCell}>Company Name</TableCell>
                 <TableCell style={tableHeaderCell}>User</TableCell>
                 <TableCell style={tableHeaderCell}>Description</TableCell>
+                <TableCell style={tableHeaderCell}>Images</TableCell>
                 <TableCell align="right" style={tableHeaderCell}>
                   Actions
                 </TableCell>
@@ -244,17 +264,31 @@ const handleExport =()=>{
               {productList
                 ?.slice(
                   (page - 1) * rowsPerPage,
-                  (page - 1) * rowsPerPage + rowsPerPage
+                  (page - 1) * rowsPerPage + rowsPerPage,
                 )
                 .map((product) => (
                   <TableRow key={product._id}>
-                    <TableCell>
-                      {product.name}
-                    </TableCell>
+                    <TableCell>{product.name}</TableCell>
                     <TableCell>{product.price}</TableCell>
                     <TableCell>{product.company}</TableCell>
                     <TableCell>{product?.product_name}</TableCell>
                     <TableCell>{product?.productDescription}</TableCell>
+                    <TableCell>
+                      {product?.productImages?.length > 0 ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() =>
+                            handleOpenImages(product.productImages)
+                          }
+                        >
+                          View Images ({product.productImages.length})
+                        </Button>
+                      ) : (
+                        "No Images"
+                      )}
+                    </TableCell>
+
                     <TableCell align="right">
                       <IconButton
                         onClick={(e) => handleMenuClick(e, product?._id)}
@@ -264,7 +298,9 @@ const handleExport =()=>{
                       </IconButton>
                       <Menu
                         anchorEl={anchorEl}
-                        open={Boolean(anchorEl) && currentUserId === product?._id}
+                        open={
+                          Boolean(anchorEl) && currentUserId === product?._id
+                        }
                         onClose={() => setAnchorEl(null)}
                       >
                         <MenuItem

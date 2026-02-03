@@ -7,6 +7,7 @@ const { ObjectId } = require("mongodb");
 const {PRODUCTS, USERS_DB} = require('../common/collectionNames');
 module.exports = {
   addProduct,
+  updateProduct,
   getProductList,
   deleteProduct,
   editProduct,
@@ -86,6 +87,88 @@ async function addProduct(req, res) {
     res.status(500).json({ err: true, msg: "Failed to add product" });
   }
 }
+
+async function updateProduct(req, res) {
+  const uploadMiddleware = upload.array("productImages");
+
+  try {
+    // run multer
+    await new Promise((resolve, reject) => {
+      uploadMiddleware(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    const { id } = req.params;
+    const {
+      name,
+      price,
+      company,
+      productDescription,
+      keepImageIndexes,
+    } = req.body;
+
+    const files = req.files || [];
+
+    const collection = await db.connectProductsDb();
+
+    // get existing product
+    const product = await collection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!product) {
+      return res
+        .status(404)
+        .json({ err: true, msg: "Product not found" });
+    }
+
+    // ✅ filter existing images
+    let finalImages = [];
+    if (keepImageIndexes) {
+      const indexes = JSON.parse(keepImageIndexes);
+      finalImages = (product.productImages || []).filter(
+        (_, index) => indexes.includes(index)
+      );
+    }
+
+    // ✅ convert new images
+    const newImages = files.map((file) =>
+      `data:${file.mimetype};base64,${file.buffer.toString("base64")}`
+    );
+
+    finalImages = [...finalImages, ...newImages];
+
+    // build update doc
+    const updateDoc = {
+      ...(name && { name }),
+      ...(price && { price: Number(price) }),
+      ...(company && { company }),
+      ...(productDescription && { productDescription }),
+      ...(finalImages.length && { productImages: finalImages }),
+      updatedAt: new Date(),
+    };
+
+    await collection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateDoc }
+    );
+
+    res.json({
+      err: false,
+      msg: "Product updated successfully",
+    });
+  } catch (error) {
+    console.error("Update Product Error:", error);
+    res.status(500).json({
+      err: true,
+      msg: "Failed to update product",
+    });
+  }
+}
+
+
 
 async function getProductList(req, res) {
   const collection = await db.connectProductsDb();
