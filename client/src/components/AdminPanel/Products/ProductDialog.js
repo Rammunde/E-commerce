@@ -14,17 +14,18 @@ import {
 import { AttachFile, Clear } from "@mui/icons-material";
 
 const ProductDialog = ({ open, onClose, mode = "add", product }) => {
+  /* ================= STATES ================= */
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
   const [productCampany, setProductCampany] = useState("");
   const [productDescription, setProductDescription] = useState("");
-  const [productImages, setProductImages] = useState([]);
-  const [fileNames, setFileNames] = useState("");
+  const [productImages, setProductImages] = useState([]); // new files
+  const [fileNames, setFileNames] = useState(""); // new file names display
+  const [keepImageIndexes, setKeepImageIndexes] = useState([]); // indexes of existing images to keep
 
   const [respMsg, setRespMsg] = useState("");
   const [error, setIsError] = useState(false);
 
-  console.log("product", product)
   /* ================= PREFILL FOR EDIT ================= */
   useEffect(() => {
     if (mode === "edit" && product) {
@@ -32,9 +33,15 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
       setProductCampany(product.company || "");
       setProductDescription(product.productDescription || "");
       setProductPrice(product.price || "");
-      setFileNames(
-        product.productImages?.map((img) => img.originalname).join(", ") || ""
-      );
+
+      // Keep all existing images by default
+      if (product.productImages?.length) {
+        setKeepImageIndexes(
+          product.productImages.map((_, index) => index)
+        );
+      }
+
+      setFileNames(""); // do not show base64 in input
     }
 
     if (mode === "add") {
@@ -73,6 +80,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
     setProductPrice("");
     setProductImages([]);
     setFileNames("");
+    setKeepImageIndexes([]);
   };
 
   /* ================= ADD PRODUCT API ================= */
@@ -105,14 +113,24 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
   /* ================= EDIT PRODUCT API ================= */
   const updateProduct = async () => {
     const formData = new FormData();
+
     formData.append("name", productName);
     formData.append("price", Number(productPrice));
     formData.append("company", productCampany);
     formData.append("productDescription", productDescription);
 
-    Array.from(productImages).forEach((file) =>
-      formData.append("productImages", file)
+    // ✅ send indexes only (existing images to keep)
+    formData.append(
+      "keepImageIndexes",
+      JSON.stringify(keepImageIndexes)
     );
+
+    // ✅ append only new images
+    if (productImages?.length) {
+      Array.from(productImages).forEach((file) =>
+        formData.append("productImages", file)
+      );
+    }
 
     const resp = await fetch(
       `http://localhost:5000/products/updateProduct/${product._id}`,
@@ -155,6 +173,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
 
       <DialogContent>
         <Grid container spacing={2}>
+          {/* RESPONSE MSG */}
           <Grid item xs={12}>
             {respMsg && (
               <Alert
@@ -167,6 +186,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
             )}
           </Grid>
 
+          {/* FORM FIELDS */}
           <Grid item xs={12}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -205,6 +225,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
                 />
               </Grid>
 
+              {/* FILE INPUT */}
               <Grid item xs={12}>
                 <input
                   type="file"
@@ -213,7 +234,6 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
                   hidden
                   onChange={handleImageChange}
                 />
-
                 <TextField
                   fullWidth
                   disabled
@@ -235,6 +255,46 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
                   }}
                 />
               </Grid>
+
+              {/* EXISTING IMAGES */}
+              {mode === "edit" &&
+                product?.productImages?.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                      Existing Images (click to remove)
+                    </Typography>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {product.productImages.map((img, index) =>
+                        keepImageIndexes.includes(index) ? (
+                          <img
+                            key={index}
+                            src={img}
+                            alt="product"
+                            width={60}
+                            height={60}
+                            style={{
+                              borderRadius: 6,
+                              cursor: "pointer",
+                              border: "2px solid #1976d2",
+                            }}
+                            onClick={() =>
+                              setKeepImageIndexes((prev) =>
+                                prev.filter((i) => i !== index)
+                              )
+                            }
+                            title="Click to remove"
+                          />
+                        ) : null
+                      )}
+                    </div>
+                  </Grid>
+                )}
             </Grid>
           </Grid>
         </Grid>
@@ -245,7 +305,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
           display: "flex",
           justifyContent: "center",
           gap: "1rem",
-          padding: ' 0 1.5rem 1rem' // top | left-right | bottom 
+          padding: "0 1.5rem 1rem",
         }}
       >
         <Button onClick={onClose} variant="outlined" fullWidth>

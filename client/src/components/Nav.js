@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from '../redux/appSlice';
+import { logout } from "../redux/appSlice";
 
 const Nav = () => {
   const dispatch = useDispatch();
@@ -24,7 +24,7 @@ const Nav = () => {
   const activeLinkStyle = {
     textDecoration: "underline",
     textDecorationColor: "white", // Custom underline color
-    textUnderlineOffset: "4px",    // Space between text and underline
+    textUnderlineOffset: "4px", // Space between text and underline
     // marginBottom: "4px",           // Additional space below the text
     fontWeight: "bold",
   };
@@ -43,9 +43,8 @@ const Nav = () => {
         paddingTop: "5px",
         paddingBottom: "10px",
         position: "sticky",
-top: 0,
-zIndex: 1000
-
+        top: 0,
+        zIndex: 1000,
       }}
     >
       <div
@@ -155,33 +154,35 @@ zIndex: 1000
                 Logout ({fullName})
               </NavLink>
 
-              <NavLink
-                to="/cart"
-                style={({ isActive }) =>
-                  isActive
-                    ? { ...navLinkStyle, ...activeLinkStyle }
-                    : navLinkStyle
-                }
-              >
-                <FontAwesomeIcon icon={faCartShopping} size="lg" />
-                {totalAddedItems > 0 && (
-                  <span
-                    style={{
-                      position: "relative",
-                      top: "-10px",
-                      right: "-10px",
-                      background: "red",
-                      color: "white",
-                      borderRadius: "50%",
-                      padding: "0 6px",
-                      fontSize: "12px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {totalAddedItems}
-                  </span>
-                )}
-              </NavLink>
+              {!isAdmin && (
+                <NavLink
+                  to="/cart"
+                  style={({ isActive }) =>
+                    isActive
+                      ? { ...navLinkStyle, ...activeLinkStyle }
+                      : navLinkStyle
+                  }
+                >
+                  <FontAwesomeIcon icon={faCartShopping} size="lg" />
+                  {totalAddedItems > 0 && (
+                    <span
+                      style={{
+                        position: "relative",
+                        top: "-10px",
+                        right: "-10px",
+                        background: "red",
+                        color: "white",
+                        borderRadius: "50%",
+                        padding: "0 6px",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {totalAddedItems}
+                    </span>
+                  )}
+                </NavLink>
+              )}
             </>
           )}
         </div>

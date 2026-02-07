@@ -1,10 +1,8 @@
-import React, { useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route} from "react-router-dom";
 import PrivateComponent from "./components/PrivateComponent";
 import HomePage from "./components/Home";
 import ProductPage from "./components/ProductPage";
 import Container from "./components/container/Container";
-import AddProduct from "./components/AddProduct";
 import ContactUs from "./components/ContactUs/ContactUs";
 // import AdminPanel from "./components/AdminPanel";
 import UsersTable from "./components/AdminPanel/Users/UsersTable";
@@ -13,7 +11,6 @@ import SignUp from "./components/SignUp";
 import Login from './components/Login';
 
 const AppRoutes = () => {  
-  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
   const isAdmin = user?.data?.role === 'Admin';
 
