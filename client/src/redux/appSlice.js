@@ -1,7 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  value: 0,
   user: {},
   totalItems: 0,
 };
@@ -16,15 +15,17 @@ const appSlice = createSlice({
     setTotalItems: (state, action) => {
       state.totalItems = action.payload;
     },
-    logout: (state, action) => {
-      return {
-        value: 0,
-        user: {},
-        totalItems: 0,
-      };
-    }    
+    logout: (state) => {
+      state.user = {};
+      state.totalItems = 0;
+      // Also clear localStorage
+      localStorage.removeItem("user");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("appState");
+    }
   },
 });
 
-export const { setUser, setTotalItems, logout } = appSlice.actions;
+export const { setUser, logout, setTotalItems } = appSlice.actions;
 export default appSlice.reducer;
+

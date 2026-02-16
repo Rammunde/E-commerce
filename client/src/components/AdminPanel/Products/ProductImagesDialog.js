@@ -3,8 +3,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
   IconButton,
   Box,
 } from "@mui/material";
@@ -23,8 +21,8 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="sm" // ms, lg to increase the size of the modal
-      fullWidth={false} // make it to true
+      maxWidth="sm"
+      fullWidth={false}
       PaperProps={{
         sx: {
           borderRadius: 3,
@@ -41,7 +39,7 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
           fontWeight: 600,
         }}
       >
-        Product Images
+        Product Images ({currentIndex + 1} / {images.length})
         <IconButton onClick={onClose}>
           <CloseIcon />
         </IconButton>
@@ -58,11 +56,10 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
           minHeight: 320,
         }}
       >
-
         <Box
           component="img"
           src={images[currentIndex]}
-          alt="product"
+          alt={`Product image ${currentIndex + 1}`}
           sx={{
             maxWidth: "100%",
             maxHeight: 360,
@@ -90,6 +87,7 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
             key={index}
             component="img"
             src={img}
+            alt={`Thumbnail ${index + 1}`}
             onClick={() => setCurrentIndex(index)}
             sx={{
               width: 70,
@@ -111,21 +109,6 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
           />
         ))}
       </Box>
-
-      {/* FOOTER */}
-      {/* <DialogActions
-        sx={{
-          justifyContent: "space-between",
-          px: 3,
-        }}
-      >
-        <span>
-          {currentIndex + 1} / {images.length}
-        </span>
-        <Button variant="contained" onClick={onClose}>
-          Close
-        </Button>
-      </DialogActions> */}
     </Dialog>
   );
 };

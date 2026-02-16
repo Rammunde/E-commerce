@@ -17,7 +17,7 @@ const ProductCard = ({
   handleAddToCart,
 }) => {
   return (
-    <Grid item xs={12} sm={6} md={3}>
+    <Grid item xs={4} sm={4} md={3}>
       <Paper sx={{ borderRadius: "25px", p: 1 }}>
         <Box p={2}>
           <img

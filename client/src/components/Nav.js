@@ -1,194 +1,329 @@
-import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
-import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../redux/appSlice";
+import React, { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout } from '../redux/appSlice';
+import { useGetCartCountQuery } from '../redux/apiSlice';
+import {
+  AppBar,
+  Box,
+  Toolbar,
+  IconButton,
+  Typography,
+  Menu,
+  Container,
+  Avatar,
+  Button,
+  Tooltip,
+  MenuItem,
+  Badge,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  ListItemIcon,
+  Divider,
+  useTheme,
+  useMediaQuery
+} from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import LoginIcon from '@mui/icons-material/Login';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import StoreIcon from '@mui/icons-material/Store';
+import ContactMailIcon from '@mui/icons-material/ContactMail';
+import PeopleIcon from '@mui/icons-material/People';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const Nav = () => {
   const dispatch = useDispatch();
-  const totalAddedItems = useSelector((state) => state.app.totalItems);
-  const user = JSON.parse(localStorage.getItem("user"));
-  const isAdmin = user?.data?.role === "Admin";
-  const auth = localStorage.getItem("user");
-  const fullName =
-    JSON.parse(auth)?.data?.firstName + " " + JSON.parse(auth)?.data?.lastName;
   const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const logOut = () => {
+  const userFromStore = useSelector((state) => state.app.user);
+
+  // Parse User Data
+  const { userId, isAdmin, fullName, isAuthenticated } = useMemo(() => {
+    const userData = userFromStore?.data;
+    if (!userData) {
+      return { userId: null, isAdmin: false, fullName: "", isAuthenticated: false };
+    }
+    return {
+      userId: userData._id,
+      isAdmin: userData.role === "Admin",
+      fullName: `${userData.firstName || ""} ${userData.lastName || ""}`.trim(),
+      isAuthenticated: true,
+    };
+  }, [userFromStore]);
+
+  // RTK Query hook for cart count (auto-refreshes when tags are invalidated)
+  const { data: totalAddedItems = 0 } = useGetCartCountQuery(userId, {
+    skip: !userId || isAdmin,
+  });
+
+  // State
+  const [anchorElUser, setAnchorElUser] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Handlers
+  const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
+  const handleCloseUserMenu = () => setAnchorElUser(null);
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+
+  const handleLogout = () => {
+    handleCloseUserMenu();
     dispatch(logout());
-    localStorage.clear();
     navigate("/login");
   };
 
-  const activeLinkStyle = {
-    textDecoration: "underline",
-    textDecorationColor: "white", // Custom underline color
-    textUnderlineOffset: "4px", // Space between text and underline
-    // marginBottom: "4px",           // Additional space below the text
-    fontWeight: "bold",
+  const handleNavigate = (path) => {
+    navigate(path);
+    setMobileOpen(false); // Close drawer on mobile nav
   };
 
-  const navLinkStyle = {
-    marginRight: "20px",
-    color: "white",
-    textDecoration: "none",
-    padding: "10px 0", // Adds some vertical padding for better click area
-  };
+  // Links Configuration
+  const userLinks = [
+    { label: "Products", path: "/product", icon: <StoreIcon /> },
+    { label: "Contact Us", path: "/contactUs", icon: <ContactMailIcon /> },
+  ];
+
+  const adminLinks = [
+    { label: "User Management", path: "/user-management", icon: <PeopleIcon /> },
+    { label: "Product Management", path: "/product-management", icon: <InventoryIcon /> },
+  ];
+
+  const guestLinks = [
+    { label: "Login", path: "/login", icon: <LoginIcon /> },
+    { label: "Signup", path: "/signup", icon: <PersonAddIcon /> },
+  ];
+
+  const currentLinks = isAdmin ? adminLinks : isAuthenticated ? userLinks : guestLinks;
+
+  // Render Mobile Drawer
+  const drawer = (
+    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
+      <Box sx={{ py: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+        <DashboardIcon color="primary" />
+        <Typography variant="h6" sx={{ my: 2, fontWeight: 'bold' }}>
+          E-Commerce
+        </Typography>
+      </Box>
+      <Divider />
+      <List>
+        {currentLinks.map((item) => (
+          <ListItem key={item.label} disablePadding>
+            <ListItemButton onClick={() => handleNavigate(item.path)} selected={location.pathname === item.path}>
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+        {/* Mobile Cart & Logout (if authenticated) */}
+        {isAuthenticated && !isAdmin && (
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => handleNavigate('/cart')}>
+              <ListItemIcon>
+                <Badge badgeContent={totalAddedItems} color="error">
+                  <ShoppingCartIcon />
+                </Badge>
+              </ListItemIcon>
+              <ListItemText primary="Cart" />
+            </ListItemButton>
+          </ListItem>
+        )}
+        {isAuthenticated && (
+          <ListItem disablePadding>
+            <ListItemButton onClick={handleLogout}>
+              <ListItemIcon><LogoutIcon /></ListItemIcon>
+              <ListItemText primary="Logout" />
+            </ListItemButton>
+          </ListItem>
+        )}
+      </List>
+    </Box>
+  );
 
   return (
-    <div
-      style={{
-        background: "#626467", // Navbar color
-        paddingTop: "5px",
-        paddingBottom: "10px",
-        position: "sticky",
-        top: 0,
-        zIndex: 1000,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+    <AppBar position="sticky" sx={{ background: 'linear-gradient(90deg, #06042cff 0%, #090979 35%, #00d4ff 100%)', color: 'white', boxShadow: 3 }}>
+      <Container maxWidth="xl">
+        <Toolbar disableGutters>
+          {/* LOGO - Desktop */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, mr: 1, alignItems: 'center' }}>
+            <Box
+              component="a"
+              onClick={() => navigate(isAdmin ? '/user-management' : '/product')}
+              sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            >
+              <img
+                src="https://img.etimg.com/thumb/msid-100973430,width-650,height-488,imgsize-2985114,resizemode-75/indian-ecommerce-market.jpg"
+                alt="Logo"
+                style={{ height: 40, width: 40, borderRadius: '50%', objectFit: 'cover', marginRight: 10 }}
+              />
+              <Typography
+                variant="h6"
+                noWrap
+                sx={{
+                  mr: 2,
+                  display: { xs: 'none', md: 'flex' },
+                  fontFamily: 'monospace',
+                  fontWeight: 700,
+                  letterSpacing: '.1rem',
+                  color: 'inherit',
+                  textDecoration: 'none',
+                }}
+              >
+                E-COMM
+              </Typography>
+            </Box>
+          </Box>
+
+
+          {/* LOGO & MENU - Mobile */}
+          <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
+            <IconButton
+              size="large"
+              aria-label="open drawer"
+              onClick={handleDrawerToggle}
+              color="inherit"
+            >
+              <MenuIcon />
+            </IconButton>
+          </Box>
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, flexGrow: 1, alignItems: 'center' }}>
+            <Typography
+              variant="h5"
+              noWrap
+              component="a"
+              onClick={() => navigate('/product')}
+              sx={{
+                mr: 2,
+                display: { xs: 'flex', md: 'none' },
+                flexGrow: 1,
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                letterSpacing: '.1rem',
+                color: 'inherit',
+                textDecoration: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              E-COMM
+            </Typography>
+          </Box>
+
+          {/* LINKS - Desktop */}
+          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, justifyContent: 'center', gap: 2 }}>
+            {currentLinks.map((page) => (
+              <Button
+                key={page.label}
+                onClick={() => handleNavigate(page.path)}
+                startIcon={page.icon}
+                sx={{
+                  my: 2,
+                  color: 'white',
+                  display: 'flex',
+                  fontWeight: location.pathname === page.path ? 'bold' : 'normal',
+                  borderBottom: location.pathname === page.path ? '2px solid white' : '2px solid transparent',
+                  '&:hover': { color: 'white', bgcolor: 'rgba(255, 255, 255, 0.1)' }
+                }}
+              >
+                {page.label}
+              </Button>
+            ))}
+          </Box>
+
+          {/* USER SETTINGS (Desktop & Cart) */}
+          <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Cart Icon (Desktop Only) */}
+            {isAuthenticated && !isAdmin && (
+              <IconButton
+                onClick={() => handleNavigate('/cart')}
+                sx={{ p: 0, mr: 2, display: { xs: 'none', md: 'flex' } }}
+              >
+                <Badge badgeContent={totalAddedItems} color="error">
+                  <ShoppingCartIcon sx={{ color: 'white' }} />
+                </Badge>
+              </IconButton>
+            )}
+
+            {/* Profile Menu */}
+            {isAuthenticated ? (
+              <>
+                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                  <Avatar sx={{ bgcolor: 'white', color: 'primary.main' }}>
+                    {fullName ? fullName.charAt(0).toUpperCase() : <AccountCircleIcon />}
+                  </Avatar>
+                </IconButton>
+                <Menu
+                  sx={{ mt: '45px' }}
+                  id="menu-appbar"
+                  anchorEl={anchorElUser}
+                  anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  keepMounted
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  open={Boolean(anchorElUser)}
+                  onClose={handleCloseUserMenu}
+                >
+                  <MenuItem disabled>
+                    <Typography textAlign="center" variant="body2" fontWeight="bold">Hello, {fullName}</Typography>
+                  </MenuItem>
+                  <Divider />
+                  {isAdmin && (
+                    <MenuItem onClick={() => { handleNavigate('/user-management'); handleCloseUserMenu(); }}>
+                      <ListItemIcon><PeopleIcon fontSize="small" /></ListItemIcon>
+                      <Typography textAlign="center">Users</Typography>
+                    </MenuItem>
+                  )}
+                  <MenuItem onClick={handleLogout}>
+                    <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>
+                    <Typography textAlign="center" color="error">Logout</Typography>
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/login')}
+                  sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}
+                >
+                  Login
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate('/signup')}
+                  sx={{ bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}
+                >
+                  Signup
+                </Button>
+              </Box>
+            )}
+          </Box>
+        </Toolbar>
+      </Container>
+
+
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 250 },
         }}
       >
-        <img
-          alt="Logo"
-          className="logo"
-          src="https://img.etimg.com/thumb/msid-100973430,width-650,height-488,imgsize-2985114,resizemode-75/indian-ecommerce-market.jpg"
-          style={{ height: "50px", marginRight: "20px" }} // added margin for spacing
-        />
-        <div style={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
-          {auth && (
-            <>
-              {!isAdmin && (
-                <>
-                  <NavLink
-                    to="/"
-                    style={({ isActive }) =>
-                      isActive
-                        ? { ...navLinkStyle, ...activeLinkStyle }
-                        : navLinkStyle
-                    }
-                  >
-                    Home
-                  </NavLink>
-                  <NavLink
-                    to="/product"
-                    style={({ isActive }) =>
-                      isActive
-                        ? { ...navLinkStyle, ...activeLinkStyle }
-                        : navLinkStyle
-                    }
-                  >
-                    Products
-                  </NavLink>
-                  <NavLink
-                    to="/contactUs"
-                    style={({ isActive }) =>
-                      isActive
-                        ? { ...navLinkStyle, ...activeLinkStyle }
-                        : navLinkStyle
-                    }
-                  >
-                    Contact Us
-                  </NavLink>
-                </>
-              )}
-              {isAdmin && (
-                <>
-                  <NavLink
-                    to="/user-management"
-                    style={({ isActive }) =>
-                      isActive
-                        ? { ...navLinkStyle, ...activeLinkStyle }
-                        : navLinkStyle
-                    }
-                  >
-                    User Management
-                  </NavLink>
-                  <NavLink
-                    to="/product-management"
-                    style={({ isActive }) =>
-                      isActive
-                        ? { ...navLinkStyle, ...activeLinkStyle }
-                        : navLinkStyle
-                    }
-                  >
-                    Product Management
-                  </NavLink>
-                </>
-              )}
-            </>
-          )}
-        </div>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          {!auth ? (
-            <>
-              <NavLink
-                to="/signup"
-                style={({ isActive }) =>
-                  isActive
-                    ? { ...navLinkStyle, ...activeLinkStyle }
-                    : navLinkStyle
-                }
-              >
-                Signup
-              </NavLink>
-              <NavLink
-                to="/login"
-                style={({ isActive }) =>
-                  isActive
-                    ? { ...navLinkStyle, ...activeLinkStyle }
-                    : navLinkStyle
-                }
-              >
-                Login
-              </NavLink>
-            </>
-          ) : (
-            <>
-              <NavLink onClick={logOut} to="/login" style={navLinkStyle}>
-                Logout ({fullName})
-              </NavLink>
-
-              {!isAdmin && (
-                <NavLink
-                  to="/cart"
-                  style={({ isActive }) =>
-                    isActive
-                      ? { ...navLinkStyle, ...activeLinkStyle }
-                      : navLinkStyle
-                  }
-                >
-                  <FontAwesomeIcon icon={faCartShopping} size="lg" />
-                  {totalAddedItems > 0 && (
-                    <span
-                      style={{
-                        position: "relative",
-                        top: "-10px",
-                        right: "-10px",
-                        background: "red",
-                        color: "white",
-                        borderRadius: "50%",
-                        padding: "0 6px",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {totalAddedItems}
-                    </span>
-                  )}
-                </NavLink>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+        {drawer}
+      </Drawer>
+    </AppBar>
   );
 };
 
 export default Nav;
+

@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import appReducer from "./appSlice";
+import { apiSlice } from "./apiSlice";
 
 // Load state from localStorage
 const loadState = () => {
@@ -16,6 +17,7 @@ const loadState = () => {
 // Save state to localStorage
 const saveState = (state) => {
   try {
+    // Only persist the 'app' slice (user info etc)
     const serializedState = JSON.stringify(state.app);
     localStorage.setItem("appState", serializedState);
   } catch (e) {
@@ -30,7 +32,10 @@ const preloadedState = {
 const store = configureStore({
   reducer: {
     app: appReducer,
+    [apiSlice.reducerPath]: apiSlice.reducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(apiSlice.middleware),
   preloadedState,
 });
 
@@ -40,3 +45,4 @@ store.subscribe(() => {
 });
 
 export default store;
+

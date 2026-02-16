@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { styled } from "@mui/material/styles";
-import { Container, Paper, Grid, TextField, Button, IconButton, InputAdornment, Typography, Alert } from "@mui/material";
+import {
+  Container,
+  Paper,
+  Grid,
+  TextField,
+  Button,
+  IconButton,
+  InputAdornment,
+  Typography,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
-// Define styled components
+// Styled components
 const StyledContainer = styled(Container)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -23,62 +34,84 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   alignItems: "center",
 }));
 
-const StyledFormElement = styled(Grid)(({ theme }) => ({
-  // marginBottom: theme.spacing(2),
-}));
-
-const StyledButton = styled(Button)(({ theme }) => ({
-  // marginTop: theme.spacing(2),
-}));
-
-const YourComponent = () => {
+const SignUpPage = () => {
   const navigate = useNavigate();
 
-  const [firstName, setFirstName] = useState('');
+  const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [respMsg, setRespMsg] = useState("");
+  const [error, setError] = useState(false);
   const [checkValidate, setCheckValidate] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Redirect if already logged in
   useEffect(() => {
-    const auth = localStorage.getItem('user');
+    const auth = localStorage.getItem("user");
     if (auth) {
-      navigate('/');
+      navigate("/product");
     }
   }, [navigate]);
 
-  const RegisterUser = () => {
+  // Validation helpers
+  const validateEmail = (email) => {
+    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    return email && emailRegex.test(email);
+  };
+
+  const validateMobileNo = (no) => {
+    const mobileRegex = /^\d{10}$/;
+    return mobileRegex.test(no);
+  };
+
+  const isFormValid = () => {
+    return (
+      firstName?.trim() &&
+      lastName?.trim() &&
+      username?.trim() &&
+      password?.trim() &&
+      validateEmail(email) &&
+      validateMobileNo(mobile)
+    );
+  };
+
+  const registerUser = async () => {
     setCheckValidate(true);
-    if (firstName?.trim() && lastName?.trim() && username?.trim() && mobile.length === 10) {
-      const fullName = firstName +" "+ lastName;
-      fetch("http://localhost:5000/users/register", {
-        method: "post",
+    if (!isFormValid()) return;
+
+    setIsLoading(true);
+    try {
+      const fullName = `${firstName} ${lastName}`;
+      const response = await fetch("http://localhost:5000/users/register", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, firstName, lastName, email, mobile, username, password }),
-      })
-        .then((resp) => resp.json())
-        .then((data) => {
-          setRespMsg(data?.msg);
-          navigate('/login');
-        });
+        body: JSON.stringify({
+          fullName,
+          firstName,
+          lastName,
+          email,
+          mobile,
+          username,
+          password,
+        }),
+      });
+      const data = await response.json();
+
+      setRespMsg(data?.msg);
+      setError(false);
+      navigate("/login");
+    } catch (err) {
+      setRespMsg("Registration failed. Please try again.");
+      setError(true);
+    } finally {
+      setIsLoading(false);
       setCheckValidate(false);
     }
   };
-
-  useEffect(() => {
-    fetch("http://localhost:5000/users/getAllUsers", {
-      method: "get",
-      headers: { "Content-Type": "application/json" },
-    })
-      .then((resp) => resp.json())
-      .then((data) => {
-        console.log(data);
-      });
-  }, []);
 
   const clearForm = () => {
     setFirstName("");
@@ -91,104 +124,94 @@ const YourComponent = () => {
     setCheckValidate(false);
   };
 
-  const handleCloseReportUserManagement = () => {
+  const handleCloseAlert = () => {
     setRespMsg("");
   };
 
-
-  const validateEmail = (email) => {
-    const isValidEmail = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
-    if (email && email.match(isValidEmail)) {
-      return false
-    } else {
-      return true;
-    }
-  }
-  const validateMobileNo = (no) => {
-    return no?.trim()?.length === 10 && Number.isInteger(no) ? false : true;
-  }
-
   return (
-    <StyledContainer
-      component="main"
-      maxWidth="xs"
-    >
+    <StyledContainer component="main" maxWidth="xs">
       <StyledPaper elevation={3}>
         {respMsg && (
           <Alert
-            onClose={handleCloseReportUserManagement}
-            severity="success"
-            sx={{ mb: 2 }}
+            onClose={handleCloseAlert}
+            severity={error ? "error" : "success"}
+            sx={{ mb: 2, width: "100%" }}
           >
             {respMsg}
           </Alert>
         )}
-        <Typography variant="h5" gutterBottom>Register</Typography>
+        <Typography variant="h5" gutterBottom>
+          Register
+        </Typography>
         <form style={{ width: "100%" }}>
           <Grid container spacing={2}>
-            <StyledFormElement item xs={12} sm={6}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="First Name"
                 variant="outlined"
-                error={checkValidate ? firstName?.trim() ? false : true : false}
+                error={checkValidate && !firstName?.trim()}
                 value={firstName}
-                onChange={(e) => { 
-                  setFirstName(e.target.value);
-                  setCheckValidate(false)
-                 }}
+                onChange={(e) => setFirstName(e.target.value)}
               />
-            </StyledFormElement>
-            <StyledFormElement item xs={12} sm={6}>
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Last Name"
                 variant="outlined"
-                error={checkValidate ? lastName?.trim() ? false : true : false}
+                error={checkValidate && !lastName?.trim()}
                 value={lastName}
-                onChange={(e) => { setLastName(e.target.value);
-                   setCheckValidate(false) }}
+                onChange={(e) => setLastName(e.target.value)}
               />
-            </StyledFormElement>
-            <StyledFormElement item xs={12}>
+            </Grid>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Email Address"
                 variant="outlined"
-                error={checkValidate ? validateEmail(email) : false}
+                error={checkValidate && !validateEmail(email)}
+                helperText={
+                  checkValidate && !validateEmail(email)
+                    ? "Enter a valid email"
+                    : ""
+                }
                 value={email}
-                onChange={(e) => { setEmail(e.target.value);
-                   setCheckValidate(false) }}
+                onChange={(e) => setEmail(e.target.value)}
               />
-            </StyledFormElement>
-            <StyledFormElement item xs={12}>
+            </Grid>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Mobile Number"
                 variant="outlined"
-                error={checkValidate ? validateMobileNo(mobile) : false}
+                error={checkValidate && !validateMobileNo(mobile)}
+                helperText={
+                  checkValidate && !validateMobileNo(mobile)
+                    ? "Enter a valid 10-digit number"
+                    : ""
+                }
                 value={mobile}
-                onChange={(e) => { setMobile(e.target.value);
-                   setCheckValidate(false) }}
+                onChange={(e) => setMobile(e.target.value)}
+                inputProps={{ maxLength: 10 }}
               />
-            </StyledFormElement>
-            <StyledFormElement item xs={12}>
+            </Grid>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Username"
                 variant="outlined"
-                error={checkValidate ? username?.trim() ? false : true : false}
+                error={checkValidate && !username?.trim()}
                 value={username}
-                onChange={(e) => { setUsername(e.target.value);
-                   setCheckValidate(false) }}
+                onChange={(e) => setUsername(e.target.value)}
               />
-            </StyledFormElement>
-            <StyledFormElement item xs={12}>
+            </Grid>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Password"
                 variant="outlined"
-                error={checkValidate ? password?.trim() ? false : true : false}
+                error={checkValidate && !password?.trim()}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -196,44 +219,49 @@ const YourComponent = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        onClick={() => { setShowPassword(!showPassword);
-                           setCheckValidate(false) }}
+                        onClick={() => setShowPassword(!showPassword)}
                         edge="end"
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
                     </InputAdornment>
-                  )
+                  ),
                 }}
               />
-            </StyledFormElement>
+            </Grid>
           </Grid>
           <Grid container spacing={2} sx={{ mt: 2 }}>
             <Grid item xs={6}>
-              <StyledButton
+              <Button
                 fullWidth
                 variant="outlined"
                 color="primary"
                 onClick={clearForm}
               >
                 Cancel
-              </StyledButton>
+              </Button>
             </Grid>
             <Grid item xs={6}>
-              <StyledButton
+              <Button
                 fullWidth
                 variant="contained"
                 color="primary"
-                onClick={RegisterUser}
+                onClick={registerUser}
+                disabled={isLoading}
               >
-                Sign Up
-              </StyledButton>
+                {isLoading ? <CircularProgress size={24} /> : "Sign Up"}
+              </Button>
             </Grid>
           </Grid>
         </form>
+        <div style={{ paddingTop: "20px", textAlign: "center" }}>
+          <Typography variant="body2">
+            Already have an account? <Link to="/login">Login</Link>
+          </Typography>
+        </div>
       </StyledPaper>
     </StyledContainer>
   );
 };
 
-export default YourComponent;
+export default SignUpPage;

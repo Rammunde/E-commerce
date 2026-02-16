@@ -23,6 +23,7 @@ router.post('/removeAddedItems', productService.removeAddedItems);
 router.post('/IncreaseDecreaseItems', productService.IncreaseDecreaseItems);
 router.post('/getAllProductList', productService.getAllProductList);
 router.delete('/deleteProduct/:id', productService.deleteProduct);
+router.post('/placeOrder', productService.placeOrder);
 
 
 module.exports = router;

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { styled } from "@mui/material/styles";
 import {
   TextField,
   Button,
@@ -10,51 +9,16 @@ import {
   InputAdornment,
   Typography,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
-import { getTotalAddedItems } from "../commonApi";
 import { useDispatch } from "react-redux";
-import { setTotalItems } from "../redux/appSlice";
-
-// Define styles using MUI v5 styled API
-const useStyles = styled({
-  loginContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginTop: 64, // Adjust the margin top as needed
-  },
-  paper: {
-    padding: "32px 24px", // Add padding to all sides
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    borderRadius: 8,
-    width: "100%",
-    marginTop: 64, // Adjust the margin top as needed
-  },
-  form: {
-    width: "100%", // Fix IE 11 issue
-    // padding: "0 16px", // Add padding to left and right
-    // paddingTop:"30px",
-    marginBottom: 16, // Add margin at the bottom
-  },
-  formElement: {
-    marginBottom: 16,
-  },
-  appButton: {
-    margin: "16px",
-  },
-  linkContainer: {
-    marginTop: 20,
-    textAlign: "center",
-  },
-});
+import { setUser } from "../redux/appSlice";
+import { useLoginUserMutation } from "../redux/apiSlice";
 
 const LoginPage = () => {
-  const classes = useStyles();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -63,48 +27,44 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [respMsg, setRespMsg] = useState("");
   const [checkValidate, setCheckValidate] = useState(false);
-  const [error, setError] = useState(false);
+  const [loginUser, { isLoading }] = useLoginUserMutation();
 
-  const navigateToSignUp = () => {
-    navigate("/signup");
-  };
-
-  const loginUser = () => {
+  const handleLogin = async () => {
     setCheckValidate(true);
-    if (username?.trim() && password) {
-      fetch("http://localhost:5000/users/loginUser", {
-        method: "post",
-        headers: { "content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      })
-        .then((resp) => resp.json())
-        .then((data) => {
-          setRespMsg(data?.msg);
-          setError(data.err);
-          if (data.err === false) {
-            localStorage.setItem("user", JSON.stringify(data));
-            localStorage.setItem("userId", data?.data?._id);
-            fetchData(data?.data?._id);
-            if (data?.data?.role === "Admin") {
-              navigate("/user-management");
-            } else {
-              navigate("/");
-            }
-          } else {
-            localStorage.clear();
-          }
-        });
+    if (!username?.trim() || !password) return;
+
+    try {
+      const data = await loginUser({ username, password }).unwrap();
+
+      if (data.err === false) {
+        setRespMsg(data?.msg);
+        localStorage.setItem("user", JSON.stringify(data));
+        localStorage.setItem("userId", data?.data?._id);
+
+        // Update Redux User State to trigger Nav update
+        dispatch(setUser(data));
+
+        // Navigate based on role
+        navigate(data?.data?.role === "Admin" ? "/user-management" : "/product");
+      } else {
+        setRespMsg(data?.msg || "Login failed");
+        localStorage.clear();
+      }
+    } catch (err) {
+      setRespMsg(err?.data?.msg || "Failed to login. Please try again.");
+    } finally {
       setCheckValidate(false);
     }
   };
 
-  const fetchData = async (userId) => {
-    const total = await getTotalAddedItems(userId); // Pass userId
-    console.log("res", total);
-    dispatch(setTotalItems(total)); // Update Redux state
+  const handleCloseAlert = () => {
+    setRespMsg("");
   };
 
-  const handleCloseReportUserManagement = () => {
+  const handleClearForm = () => {
+    setUsername("");
+    setPassword("");
+    setCheckValidate(false);
     setRespMsg("");
   };
 
@@ -134,60 +94,37 @@ const LoginPage = () => {
         <Grid container spacing={2}>
           {respMsg && (
             <Grid item xs={12}>
-              {respMsg && !error && (
-                <Alert
-                  onClose={handleCloseReportUserManagement}
-                  severity="success"
-                  sx={{ marginBottom: 2 }}
-                >
-                  {respMsg}
-                </Alert>
-              )}
-              {respMsg && error && (
-                <Alert
-                  onClose={handleCloseReportUserManagement}
-                  severity="error"
-                  sx={{ marginBottom: 2 }}
-                >
-                  {respMsg}
-                </Alert>
-              )}
+              <Alert
+                onClose={handleCloseAlert}
+                severity={respMsg.includes("failed") || respMsg.includes("Failed") ? "error" : "success"}
+                sx={{ marginBottom: 2 }}
+              >
+                {respMsg}
+              </Alert>
             </Grid>
           )}
           <Grid item xs={12}>
             <Typography variant="h5">Login</Typography>
-            <form className={classes.form}>
+            <form style={{ width: "100%", marginBottom: 16 }} onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} className={classes.formElement}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Username"
                     variant="outlined"
-                    error={
-                      checkValidate
-                        ? username?.trim()?.length > 0
-                          ? false
-                          : true
-                        : false
-                    }
+                    error={checkValidate && !username?.trim()}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="off"
                     name="username"
                   />
                 </Grid>
-                <Grid item xs={12} className={classes.formElement}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Password"
                     variant="outlined"
-                    error={
-                      checkValidate
-                        ? password?.length > 0
-                          ? false
-                          : true
-                        : false
-                    }
+                    error={checkValidate && !password}
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -208,16 +145,13 @@ const LoginPage = () => {
                   />
                 </Grid>
               </Grid>
-              <Grid container spacing={2} style={{ paddingTop: "20px" }}>
+              <Grid container spacing={2} sx={{ paddingTop: "20px" }}>
                 <Grid item xs={6}>
                   <Button
                     fullWidth
-                    className={classes.appButton}
                     variant="outlined"
                     color="primary"
-                    onClick={() => {
-                      setCheckValidate(false);
-                    }}
+                    onClick={handleClearForm}
                   >
                     Cancel
                   </Button>
@@ -225,19 +159,19 @@ const LoginPage = () => {
                 <Grid item xs={6}>
                   <Button
                     fullWidth
-                    className={classes.appButton}
                     variant="contained"
                     color="primary"
-                    onClick={loginUser}
+                    type="submit"
+                    disabled={isLoading}
                   >
-                    Log In
+                    {isLoading ? <CircularProgress size={24} /> : "Log In"}
                   </Button>
                 </Grid>
               </Grid>
             </form>
           </Grid>
         </Grid>
-        <div className={classes.linkContainer} style={{ paddingTop: "20px" }}>
+        <div style={{ paddingTop: "20px", textAlign: "center" }}>
           <Typography variant="body2">
             Don't have an account? <Link to="/signup">Sign up</Link>
           </Typography>
@@ -248,3 +182,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

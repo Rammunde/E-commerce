@@ -55,7 +55,7 @@ async function getAllUsers(req, res) {
     }
     res.json({
       data: users,
-      totalCount: totalCount, 
+      totalCount: totalCount,
       msg: "Users Retrieved Successfully",
     });
   } catch (error) {
@@ -282,21 +282,34 @@ const transporter = nodemailer.createTransport({
 
 async function sendMailToOwner(req, res) {
   const { name, mobileNo, emailId, message } = req.body;
+
   try {
+    if (!process.env.EMAIL_USER) {
+      throw new Error("Server email configuration missing");
+    }
+
     const mailOptions = {
-      from: emailId,
-      to: emailId, // Replace with your email address
-      subject: `Contact Us Message from ${name}`,
-      text: `Name: ${name}\nPhone: ${mobileNo}\nMessage: ${message}`,
+      from: `"${name}" <${process.env.EMAIL_USER}>`, // Send from authenticated server email
+      to: process.env.EMAIL_USER, // Send TO the owner
+      replyTo: emailId, // User's email for reply
+      subject: `New Contact Message from ${name}`,
+      html: `
+        <h3>New Contact Us Message</h3>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${emailId}</p>
+        <p><strong>Phone:</strong> ${mobileNo}</p>
+        <p><strong>Message:</strong></p>
+        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px;">
+          ${message.replace(/\n/g, '<br>')}
+        </div>
+      `,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        return res.status(500).json({ err: true, msg: error.toString() });
-      }
-      return res.status(200).json({ err: false, msg: "Message Send Successfully" });
-    });
-  } catch (err) {
-    console.log(err);
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Contact email sent:", info.messageId);
+    res.status(200).json({ err: false, msg: "Message sent successfully! We will contact you soon." });
+  } catch (error) {
+    console.error("Error sending contact email:", error);
+    res.status(500).json({ err: true, msg: "Failed to send message. Please try again later." });
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Container,
   Paper,
@@ -16,32 +16,32 @@ import {
   Tooltip,
   Pagination,
   Typography,
+  CircularProgress,
+  Backdrop,
+  Snackbar,
+  Alert,
 } from "@mui/material";
-import { makeStyles } from "@mui/styles";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchField from "./SearchField";
 import NewUserCreation from "./NewUserCreation";
 
-const useStyles = makeStyles((theme) => ({
-  layoutSetting: {
-    marginTop: "2rem",
-  },
-}));
+// API Configuration
+const API_BASE_URL = "http://localhost:5000";
 
-const table = { width: "100%" };
-const tableHeaderCell = {
-  backgroundColor: "#e5e7f2",
-  fontWeight: "bold",
-  position: "sticky",
-  top: 0,
-  zIndex: 1,
+// Styles
+const styles = {
+  tableHeaderCell: {
+    backgroundColor: "#e5e7f2",
+    fontWeight: "bold",
+    position: "sticky",
+    top: 0,
+    zIndex: 1,
+  },
 };
 
 const UsersTable = () => {
-  const classes = useStyles();
-
   const initialSearchRender = useRef(true);
   const [users, setUsers] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -53,36 +53,46 @@ const UsersTable = () => {
   const [nameList, setNameList] = useState([]);
   const [open, setOpen] = useState(false);
   const [userData, setUserData] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
-  const getAllUserList = () => {
-    fetch("http://localhost:5000/users/getAllAvailableUsers", {
-      method: "post",
-      headers: { "content-Type": "application/json" },
-      body: JSON.stringify({
-        searchString: searchString,
-        limit: 10,
-        offset: 0,
-        sortBy: "name",
-        sortOrder: "asc",
-      }),
-    })
-      .then((resp) => resp.json())
-      .then((data) => {
-        setUsers(data?.data);
-        setTotalCount(data?.totalCount);
-        const names = data?.data?.map((record) => record.name);
-        setNameList(names);
+  const getAllUserList = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/getAllAvailableUsers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          searchString,
+          limit: 10,
+          offset: 0,
+          sortBy: "name",
+          sortOrder: "asc",
+        }),
       });
-  };
+      const data = await response.json();
+      setUsers(data?.data || []);
+      setTotalCount(data?.totalCount || 0);
+      const names = data?.data?.map((record) => record.name) || [];
+      setNameList(names);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: "Failed to fetch users",
+        severity: "error",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchString]);
 
   useEffect(() => {
     if (initialSearchRender.current) {
       initialSearchRender.current = false;
     } else {
-      console.log("called");
       getAllUserList();
     }
-  }, [searchString]);
+  }, [searchString, getAllUserList]);
 
   useEffect(() => {
     getAllUserList();
@@ -98,71 +108,110 @@ const UsersTable = () => {
     setOpen(true);
   };
 
-  const handleDeleteUser = (userId) => {
-    fetch(`http://localhost:5000/users/deleteUser/${userId}`, {
-      method: "DELETE",
-      headers: { "content-Type": "application/json" },
-    })
-      .then((resp) => resp.json())
-      .then(() => {
-        getAllUserList();
+  const handleDeleteUser = async (userId) => {
+    try {
+      await fetch(`${API_BASE_URL}/users/deleteUser/${userId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
+      setSnackbar({
+        open: true,
+        message: "User deleted successfully",
+        severity: "success",
+      });
+      getAllUserList();
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: "Failed to delete user",
+        severity: "error",
+      });
+    }
   };
 
-const handleExport =()=>{
-    fetch("http://localhost:5000/users/getAllUserToExport", {
-      method: "post",
-      headers: { "content-Type": "application/json" },
-      body: JSON.stringify({
-        searchString: searchString,
-        limit: 10, // Consider removing this for a full export
-        offset: 0, // Consider removing this
-        sortBy: "name",
-        sortOrder: "asc",
-      }),
-    })
-      .then((resp) => resp.json())
-      .then((data) => {
-        // Step 1: Check if data is valid and has at least one item
-        if (!data || data.data.length === 0) {
-          console.error("No data to export.");
-          return;
-        }
-
-        // Step 2: Extract headers from the first object
-        const headers = Object.keys(data.data[0]);
-        const csvHeaders = headers.join(',');
-
-        // Step 3: Map data to CSV rows
-        const csvRows = data.data.map(row => {
-          return headers.map(header => `"${row[header]}"`).join(',');
-        });
-
-        // Step 4: Combine headers and rows into a single CSV string
-        const csvContent = [csvHeaders, ...csvRows].join('\n');
-
-        // Step 5: Create a Blob and download link
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'Users csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      })
-      .catch(error => {
-        console.error("Error exporting data:", error);
+  const handleExport = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/getAllUserToExport`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          searchString,
+          sortBy: "name",
+          sortOrder: "asc",
+        }),
       });
-  }
+      const data = await response.json();
+
+      if (!data?.data?.length) {
+        setSnackbar({
+          open: true,
+          message: "No data to export",
+          severity: "warning",
+        });
+        return;
+      }
+
+      // Generate CSV
+      const headers = Object.keys(data.data[0]);
+      const csvHeaders = headers.join(",");
+      const csvRows = data.data.map((row) =>
+        headers.map((header) => `"${row[header] || ""}"`).join(",")
+      );
+      const csvContent = [csvHeaders, ...csvRows].join("\n");
+
+      // Download file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "users_export.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setSnackbar({
+        open: true,
+        message: "Export successful",
+        severity: "success",
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: "Export failed",
+        severity: "error",
+      });
+    }
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   return (
-    <Container component="main" maxWidth="md" className={classes.layoutSetting}>
+    <Container component="main" maxWidth="md" sx={{ marginTop: "2rem" }}>
+      <Backdrop
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={isLoading}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
       {open && (
         <NewUserCreation
           open={open}
@@ -175,32 +224,32 @@ const handleExport =()=>{
           }}
         />
       )}
-      <Grid style={{ paddingBottom: "2rem" }}>
-        <Typography variant="h6" color={"#525861ff"}>
-          {" "}
+
+      <Grid sx={{ paddingBottom: "2rem" }}>
+        <Typography variant="h6" color="#525861">
           Users List (
-          <span style={{ color: "#969ca5ff" }}>{totalCount} Users</span>)
+          <span style={{ color: "#969ca5" }}>{totalCount} Users</span>)
         </Typography>
       </Grid>
+
       <Grid
-        style={{
+        sx={{
           paddingBottom: "2rem",
           display: "flex",
           justifyContent: "space-between",
         }}
       >
         <SearchField
-          label={"Search by name"}
+          label="Search by name"
           setSearchString={setSearchString}
           namesList={nameList}
         />
 
-        <Grid style={{ marginTop: "0.5rem" }}>
+        <Grid sx={{ marginTop: "0.5rem" }}>
           <Button
-            fullWidth
             variant="contained"
             color="primary"
-            style={{ width: "10rem", height: "2.5rem", marginRight: "0.5rem" }}
+            sx={{ width: "10rem", height: "2.5rem", marginRight: "0.5rem" }}
             onClick={() => {
               setOpen(true);
               setUserData({});
@@ -209,10 +258,9 @@ const handleExport =()=>{
             Add New User
           </Button>
           <Button
-            fullWidth
             variant="contained"
             color="primary"
-            style={{ width: "10rem", height: "2.5rem" }}
+            sx={{ width: "10rem", height: "2.5rem" }}
             onClick={handleExport}
           >
             Export
@@ -220,16 +268,16 @@ const handleExport =()=>{
         </Grid>
       </Grid>
 
-      <Paper elevation={3} style={{ padding: "1rem", borderRadius: "0.5rem" }}>
-        <TableContainer style={{ maxHeight: 500, overflow: "auto" }}>
-          <Table style={table} aria-label="users table">
+      <Paper elevation={3} sx={{ padding: "1rem", borderRadius: "0.5rem" }}>
+        <TableContainer sx={{ maxHeight: 500, overflow: "auto" }}>
+          <Table sx={{ width: "100%" }} aria-label="users table">
             <TableHead>
               <TableRow>
-                <TableCell style={tableHeaderCell}>Name</TableCell>
-                <TableCell style={tableHeaderCell}>User-Name</TableCell>
-                <TableCell style={tableHeaderCell}>Mobile</TableCell>
-                <TableCell style={tableHeaderCell}>Email</TableCell>
-                <TableCell align="right" style={tableHeaderCell}>
+                <TableCell sx={styles.tableHeaderCell}>Name</TableCell>
+                <TableCell sx={styles.tableHeaderCell}>User-Name</TableCell>
+                <TableCell sx={styles.tableHeaderCell}>Mobile</TableCell>
+                <TableCell sx={styles.tableHeaderCell}>Email</TableCell>
+                <TableCell align="right" sx={styles.tableHeaderCell}>
                   Actions
                 </TableCell>
               </TableRow>
@@ -243,7 +291,7 @@ const handleExport =()=>{
                 .map((user) => (
                   <TableRow key={user._id}>
                     <TableCell>
-                      {user.firstName + " " + user.lastName}
+                      {user.firstName} {user.lastName}
                     </TableCell>
                     <TableCell>{user.username}</TableCell>
                     <TableCell>{user.mobile}</TableCell>
@@ -290,10 +338,10 @@ const handleExport =()=>{
         <Grid
           container
           justifyContent="flex-end"
-          style={{ marginTop: "16px", paddingBottom: "16px" }}
+          sx={{ marginTop: "16px", paddingBottom: "16px" }}
         >
           <Pagination
-            count={Math.ceil(users?.length / rowsPerPage)}
+            count={Math.ceil((users?.length || 0) / rowsPerPage)}
             page={page}
             onChange={handleChangePage}
             color="primary"
