@@ -17,82 +17,103 @@ const ProductCard = ({
   handleAddToCart,
 }) => {
   return (
-    <Grid item xs={4} sm={4} md={3}>
-      <Paper sx={{ borderRadius: "25px", p: 1 }}>
-        <Box p={2}>
+    <Grid item xs={12} sm={6} md={3} lg={2.4}>
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "8px",
+          p: 0,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'all 0.3s ease',
+          border: '1px solid #f0f0f0',
+          '&:hover': {
+            boxShadow: '0 4px 12px 0 rgba(0,0,0,0.1)',
+            transform: 'translateY(-2px)'
+          }
+        }}
+      >
+        <Box sx={{ p: 1, position: 'relative', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fff' }}>
           <img
-            src={
-              selectedMainImages[prod._id] ||
-              prod.productImages?.[0] ||
-              ""
-            }
+            src={selectedMainImages[prod._id] || prod.productImages?.[0] || ""}
             alt={prod.name}
             loading="lazy"
             style={{
-              width: "100%",
-              height: "200px",
-              borderRadius: "8px",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
             }}
           />
+        </Box>
 
-          <Box display="flex" justifyContent="center" mt={1}>
-            <Button
-              size="small"
-              onClick={() => handlePrev(prod._id)}
-              disabled={(thumbnailIndex[prod._id] || 0) === 0}
-            >
-              ◀
-            </Button>
+        <Box sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 500,
+              mb: 0.5,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: 'vertical',
+              color: '#212121'
+            }}
+          >
+            {prod.name}
+          </Typography>
 
-            <Box display="flex" overflow="hidden">
-              {prod.productImages
-                ?.slice(
-                  thumbnailIndex[prod._id] || 0,
-                  (thumbnailIndex[prod._id] || 0) + 3
-                )
-                .map((image, index) => (
-                  <img
-                    key={index}
-                    src={image}
-                    loading="lazy"
-                    alt="thumb"
-                    onClick={() =>
-                      handleThumbnailClick(prod._id, image)
-                    }
-                    style={{
-                      width: "50px",
-                      height: "60px",
-                      marginRight: "8px",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                    }}
-                  />
-                ))}
-            </Box>
-
-            <Button
-              size="small"
-              onClick={() =>
-                handleNext(prod._id, prod.productImages.length)
-              }
-              disabled={
-                (thumbnailIndex[prod._id] || 0) >=
-                prod.productImages.length - 3
-              }
-            >
-              ▶
-            </Button>
-          </Box>
-
-          <Typography variant="h6">{prod.name}</Typography>
-          <Typography variant="subtitle1">{prod.price}</Typography>
-
-          <Typography variant="body2" paragraph>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              mb: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: 'vertical'
+            }}
+          >
             {prod.productDescription}
           </Typography>
 
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
+              ₹{prod.price}
+            </Typography>
+            {prod.originalPrice && (
+              <>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ textDecoration: 'line-through', fontSize: '0.85rem' }}
+                >
+                  ₹{prod.originalPrice}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: '#388e3c', fontWeight: 700 }}
+                >
+                  {Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}% off
+                </Typography>
+              </>
+            )}
+          </Box>
+
           <Button
+            fullWidth
             variant="contained"
+            color="secondary"
+            size="small"
+            sx={{
+              mt: 'auto',
+              textTransform: 'none',
+              fontWeight: 700,
+              borderRadius: '4px',
+              py: 1
+            }}
             onClick={() =>
               handleAddToCart(
                 prod._id,

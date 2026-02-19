@@ -20,10 +20,12 @@ import {
   Backdrop,
   Snackbar,
   Alert,
+  Box,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import AddIcon from "@mui/icons-material/Add";
 import SearchField from "./SearchField";
 import NewUserCreation from "./NewUserCreation";
 
@@ -33,12 +35,23 @@ const API_BASE_URL = "http://localhost:5000";
 // Styles
 const styles = {
   tableHeaderCell: {
-    backgroundColor: "#e5e7f2",
+    backgroundColor: "#f8f9fa",
+    color: "#2874f0",
     fontWeight: "bold",
+    borderBottom: "2px solid #e0e0e0",
     position: "sticky",
     top: 0,
     zIndex: 1,
   },
+  actionButton: {
+    textTransform: 'none',
+    fontWeight: 600,
+    borderRadius: '4px',
+    boxShadow: 'none',
+    '&:hover': {
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    }
+  }
 };
 
 const UsersTable = () => {
@@ -64,7 +77,7 @@ const UsersTable = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           searchString,
-          limit: 10,
+          limit: 100, // Load more for local pagination if needed, or stick to server
           offset: 0,
           sortBy: "name",
           sortOrder: "asc",
@@ -73,7 +86,7 @@ const UsersTable = () => {
       const data = await response.json();
       setUsers(data?.data || []);
       setTotalCount(data?.totalCount || 0);
-      const names = data?.data?.map((record) => record.name) || [];
+      const names = data?.data?.map((record) => `${record.firstName} ${record.lastName}`) || [];
       setNameList(names);
     } catch (error) {
       setSnackbar({
@@ -193,163 +206,181 @@ const UsersTable = () => {
   };
 
   return (
-    <Container component="main" maxWidth="md" sx={{ marginTop: "2rem" }}>
-      <Backdrop
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={isLoading}
-      >
-        <CircularProgress color="inherit" />
-      </Backdrop>
+    <Box sx={{ bgcolor: '#f1f3f6', minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="lg">
+        <Backdrop
+          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={isLoading}
+        >
+          <CircularProgress color="inherit" />
+        </Backdrop>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ borderRadius: '8px', boxShadow: 3 }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
 
-      {open && (
-        <NewUserCreation
-          open={open}
-          userData={userData}
-          onResult={(action, boolean) => {
-            if (action === "success") {
-              getAllUserList();
-            }
-            setOpen(boolean);
-          }}
-        />
-      )}
-
-      <Grid sx={{ paddingBottom: "2rem" }}>
-        <Typography variant="h6" color="#525861">
-          Users List (
-          <span style={{ color: "#969ca5" }}>{totalCount} Users</span>)
-        </Typography>
-      </Grid>
-
-      <Grid
-        sx={{
-          paddingBottom: "2rem",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
-        <SearchField
-          label="Search by name"
-          setSearchString={setSearchString}
-          namesList={nameList}
-        />
-
-        <Grid sx={{ marginTop: "0.5rem" }}>
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{ width: "10rem", height: "2.5rem", marginRight: "0.5rem" }}
-            onClick={() => {
-              setOpen(true);
-              setUserData({});
+        {open && (
+          <NewUserCreation
+            open={open}
+            userData={userData}
+            onResult={(action, boolean) => {
+              if (action === "success") {
+                getAllUserList();
+              }
+              setOpen(boolean);
             }}
-          >
-            Add New User
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{ width: "10rem", height: "2.5rem" }}
-            onClick={handleExport}
-          >
-            Export
-          </Button>
-        </Grid>
-      </Grid>
+          />
+        )}
 
-      <Paper elevation={3} sx={{ padding: "1rem", borderRadius: "0.5rem" }}>
-        <TableContainer sx={{ maxHeight: 500, overflow: "auto" }}>
-          <Table sx={{ width: "100%" }} aria-label="users table">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={styles.tableHeaderCell}>Name</TableCell>
-                <TableCell sx={styles.tableHeaderCell}>User-Name</TableCell>
-                <TableCell sx={styles.tableHeaderCell}>Mobile</TableCell>
-                <TableCell sx={styles.tableHeaderCell}>Email</TableCell>
-                <TableCell align="right" sx={styles.tableHeaderCell}>
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users
-                ?.slice(
-                  (page - 1) * rowsPerPage,
-                  (page - 1) * rowsPerPage + rowsPerPage
-                )
-                .map((user) => (
-                  <TableRow key={user._id}>
-                    <TableCell>
-                      {user.firstName} {user.lastName}
-                    </TableCell>
-                    <TableCell>{user.username}</TableCell>
-                    <TableCell>{user.mobile}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        onClick={(e) => handleUserMenuClick(e, user?._id)}
-                        color="primary"
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                      <Menu
-                        anchorEl={anchorEl}
-                        open={Boolean(anchorEl) && currentUserId === user?._id}
-                        onClose={() => setAnchorEl(null)}
-                      >
-                        <MenuItem
-                          onClick={() => {
-                            handleEditUser(user);
-                            setAnchorEl(null);
+        <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+          <Grid container alignItems="center" justifyContent="space-between" spacing={2}>
+            <Grid item>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: '#212121' }}>
+                User Management
+                <Typography component="span" variant="body1" sx={{ ml: 1.5, color: '#878787' }}>
+                  ({totalCount} Total)
+                </Typography>
+              </Typography>
+            </Grid>
+            <Grid item sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon fontSize="small" />}
+                sx={styles.actionButton}
+                onClick={() => {
+                  setOpen(true);
+                  setUserData({});
+                }}
+              >
+                Add New User
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                sx={styles.actionButton}
+                onClick={handleExport}
+              >
+                Export CSV
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+          <SearchField
+            label="Search users by name..."
+            setSearchString={setSearchString}
+            namesList={nameList}
+          />
+        </Paper>
+
+        <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e0e0e0', overflow: 'hidden' }}>
+          <TableContainer sx={{ maxHeight: 600 }}>
+            <Table stickyHeader aria-label="users table">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={styles.tableHeaderCell}>NAME</TableCell>
+                  <TableCell sx={styles.tableHeaderCell}>USERNAME</TableCell>
+                  <TableCell sx={styles.tableHeaderCell}>MOBILE</TableCell>
+                  <TableCell sx={styles.tableHeaderCell}>EMAIL</TableCell>
+                  <TableCell align="right" sx={styles.tableHeaderCell}>ACTIONS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users
+                  ?.slice(
+                    (page - 1) * rowsPerPage,
+                    (page - 1) * rowsPerPage + rowsPerPage
+                  )
+                  .map((user) => (
+                    <TableRow key={user._id} hover>
+                      <TableCell sx={{ fontWeight: 500 }}>
+                        {user.firstName} {user.lastName}
+                      </TableCell>
+                      <TableCell>{user.username}</TableCell>
+                      <TableCell>{user.mobile}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          onClick={(e) => handleUserMenuClick(e, user?._id)}
+                          sx={{ color: '#2874f0' }}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                        <Menu
+                          anchorEl={anchorEl}
+                          open={Boolean(anchorEl) && currentUserId === user?._id}
+                          onClose={() => setAnchorEl(null)}
+                          PaperProps={{
+                            elevation: 2,
+                            sx: { borderRadius: '8px', minWidth: '120px' }
                           }}
                         >
-                          <Tooltip title="Edit">
-                            <EditIcon color="primary" />
-                          </Tooltip>
-                        </MenuItem>
-                        <MenuItem
-                          onClick={() => {
-                            handleDeleteUser(user?._id);
-                            setAnchorEl(null);
-                          }}
-                        >
-                          <Tooltip title="Delete">
-                            <DeleteIcon color="primary" />
-                          </Tooltip>
-                        </MenuItem>
-                      </Menu>
+                          <MenuItem
+                            onClick={() => {
+                              handleEditUser(user);
+                              setAnchorEl(null);
+                            }}
+                          >
+                            <EditIcon fontSize="small" color="primary" sx={{ mr: 1.5 }} />
+                            Edit
+                          </MenuItem>
+                          <MenuItem
+                            onClick={() => {
+                              handleDeleteUser(user?._id);
+                              setAnchorEl(null);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" color="error" sx={{ mr: 1.5 }} />
+                            Delete
+                          </MenuItem>
+                        </Menu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                {!isLoading && users.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                      <Typography variant="body1" color="text.secondary">
+                        No users found
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Grid
-          container
-          justifyContent="flex-end"
-          sx={{ marginTop: "16px", paddingBottom: "16px" }}
-        >
-          <Pagination
-            count={Math.ceil((users?.length || 0) / rowsPerPage)}
-            page={page}
-            onChange={handleChangePage}
-            color="primary"
-          />
-        </Grid>
-      </Paper>
-    </Container>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Box
+            sx={{
+              p: 2,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              borderTop: '1px solid #f0f0f0',
+              bgcolor: '#fff'
+            }}
+          >
+            <Pagination
+              count={Math.ceil((users?.length || 0) / rowsPerPage)}
+              page={page}
+              onChange={handleChangePage}
+              color="primary"
+              shape="rounded"
+              size="large"
+            />
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
+
 
 export default UsersTable;

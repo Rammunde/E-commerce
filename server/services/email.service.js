@@ -9,22 +9,22 @@ const EMAIL_PASS = process.env.EMAIL_PASS
 
 // Create transporter
 const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-    },
+  service: "gmail",
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
+  },
 });
 
 /**
  * Generate HTML email template for order confirmation
  */
 const generateOrderEmailHTML = (orderDetails) => {
-    const { userName, orderItems, priceDetails, orderId } = orderDetails;
+  const { userName, orderItems, priceDetails, orderId } = orderDetails;
 
-    const itemsHTML = orderItems
-        .map(
-            (item) => `
+  const itemsHTML = orderItems
+    .map(
+      (item) => `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #eee;">
           <strong>${item.name}</strong>
@@ -38,10 +38,10 @@ const generateOrderEmailHTML = (orderDetails) => {
         </td>
       </tr>
     `
-        )
-        .join("");
+    )
+    .join("");
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -63,7 +63,7 @@ const generateOrderEmailHTML = (orderDetails) => {
     <body>
       <div class="container">
         <div class="header">
-          <h1 style="margin: 0;">🛒 E-Commerce</h1>
+          <h1 style="margin: 0;">🛒 Shopveda</h1>
           <h2 style="margin: 10px 0 0 0; font-weight: normal;">Order Confirmation</h2>
           <div class="success-badge">✓ Order Placed Successfully</div>
         </div>
@@ -75,11 +75,11 @@ const generateOrderEmailHTML = (orderDetails) => {
           <p style="color: #666; font-size: 14px;">
             <strong>Order ID:</strong> #${orderId}<br>
             <strong>Date:</strong> ${new Date().toLocaleDateString("en-IN", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    })}
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })}
           </p>
           
           <table class="order-table">
@@ -126,7 +126,7 @@ const generateOrderEmailHTML = (orderDetails) => {
         </div>
         
         <div class="footer">
-          <p>© ${new Date().getFullYear()} E-Commerce. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} Shopveda. All rights reserved.</p>
           <p>This is an automated email. Please do not reply.</p>
         </div>
       </div>
@@ -142,23 +142,23 @@ const generateOrderEmailHTML = (orderDetails) => {
  * @returns {Promise} - Resolves with email info or rejects with error
  */
 const sendOrderConfirmation = async (toEmail, orderDetails) => {
-    const mailOptions = {
-        from: `"E-Commerce" <${EMAIL_USER}>`,
-        to: toEmail,
-        subject: `Order Confirmed! #${orderDetails.orderId} - E-Commerce`,
-        html: generateOrderEmailHTML(orderDetails),
-    };
+  const mailOptions = {
+    from: `"Shopveda" <${EMAIL_USER}>`,
+    to: toEmail,
+    subject: `Order Confirmed! #${orderDetails.orderId} - Shopveda`,
+    html: generateOrderEmailHTML(orderDetails),
+  };
 
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log("Email sent:", info.messageId);
-        return { success: true, messageId: info.messageId };
-    } catch (error) {
-        console.error("Email error:", error);
-        throw error;
-    }
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent:", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Email error:", error);
+    throw error;
+  }
 };
 
 module.exports = {
-    sendOrderConfirmation,
+  sendOrderConfirmation,
 };

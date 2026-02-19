@@ -11,14 +11,24 @@ import {
   CircularProgress,
 } from "@mui/material";
 import Alert from "@mui/material/Alert";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 // API Configuration
 const API_BASE_URL = "http://localhost:5000";
 
 // Email validation helper
 const validateEmail = (email) => {
-  const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   return emailRegex.test(email);
+};
+
+// Password validation helper: at least 8 characters, one uppercase, one lowercase, one number and one special character
+const validatePassword = (password) => {
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#_])[A-Za-z\d@$!%*?&#_]{8,}$/;
+  return passwordRegex.test(password);
 };
 
 const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
@@ -33,6 +43,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
   const [isError, setIsError] = useState(false);
   const [isUpdated, setIsUpdated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const isEditMode = editUserId !== 0;
 
@@ -58,6 +69,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
     setEditingUserId(0);
     setRespMsg("");
     setIsUpdated(false);
+    setShowPassword(false);
   };
 
   const handleOnClose = (action = "") => {
@@ -77,7 +89,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
       userFirstName?.trim() &&
       userLastName?.trim() &&
       userName?.trim() &&
-      password?.trim() &&
+      validatePassword(password) &&
       validateEmail(userEmail) &&
       userMobile?.length === 10
     );
@@ -147,7 +159,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
           {isEditMode ? "Edit User Details" : "Create New User"}
         </Typography>
       </DialogTitle>
-      <DialogContent sx={{ paddingTop: "0.5rem" }}>
+      <DialogContent sx={{ paddingTop: "1rem", overflow: "visible" }}>
         <Grid container spacing={2}>
           {respMsg && (
             <Grid item xs={12}>
@@ -216,17 +228,39 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
                 setUserName(e.target.value);
                 setIsUpdated(true);
               }}
+              autoComplete="off"
             />
           </Grid>
           <Grid item xs={12}>
             <TextField
               fullWidth
               label="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
                 setIsUpdated(true);
+              }}
+              autoComplete="new-password"
+              error={password.length > 0 && !validatePassword(password)}
+              helperText={
+                password.length > 0 && !validatePassword(password)
+                  ? "Password must be at least 8 characters and include at least one uppercase letter, one lowercase letter, one number, and one special character"
+                  : ""
+              }
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
               }}
             />
           </Grid>

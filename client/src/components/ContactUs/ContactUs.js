@@ -210,7 +210,7 @@ const ContactUs = () => {
               <ContactInfoItem
                 icon={<LocationOnIcon sx={{ color: "primary.main" }} />}
                 title="Address"
-                content="123 E-Commerce St, Tech City, IN 411001"
+                content="123 Shopveda St, Tech City, IN 411001"
               />
               <ContactInfoItem
                 icon={<PhoneIcon sx={{ color: "primary.main" }} />}
@@ -220,7 +220,7 @@ const ContactUs = () => {
               <ContactInfoItem
                 icon={<EmailIcon sx={{ color: "primary.main" }} />}
                 title="Email"
-                content="support@ecommerce.com"
+                content="support@shopveda.com"
               />
             </Box>
 

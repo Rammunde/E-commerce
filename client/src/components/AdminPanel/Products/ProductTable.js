@@ -20,10 +20,12 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  Box,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import AddIcon from "@mui/icons-material/Add";
 import SearchField from "../Users/SearchField";
 import ProductDialog from "./ProductDialog";
 import { useDispatch } from "react-redux";
@@ -36,12 +38,23 @@ const API_BASE_URL = "http://localhost:5000";
 // Styles
 const styles = {
   tableHeaderCell: {
-    backgroundColor: "#e5e7f2",
+    backgroundColor: "#f8f9fa",
+    color: "#2874f0",
     fontWeight: "bold",
+    borderBottom: "2px solid #e0e0e0",
     position: "sticky",
     top: 0,
     zIndex: 1,
   },
+  actionButton: {
+    textTransform: 'none',
+    fontWeight: 600,
+    borderRadius: '4px',
+    boxShadow: 'none',
+    '&:hover': {
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    }
+  }
 };
 
 const ProductTable = () => {
@@ -80,7 +93,7 @@ const ProductTable = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           searchString,
-          limit: 10,
+          limit: 100,
           offset: 0,
           sortBy: "name",
           sortOrder: "asc",
@@ -206,183 +219,228 @@ const ProductTable = () => {
   };
 
   return (
-    <Container component="main" maxWidth="md" sx={{ marginTop: "2rem" }}>
-      <Backdrop
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={isLoading}
-      >
-        <CircularProgress color="inherit" />
-      </Backdrop>
+    <Box sx={{ bgcolor: '#f1f3f6', minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="lg">
+        <Backdrop
+          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={isLoading}
+        >
+          <CircularProgress color="inherit" />
+        </Backdrop>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ borderRadius: '8px', boxShadow: 3 }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
 
-      <ProductImagesDialog
-        open={openImageDialog}
-        images={selectedImages}
-        onClose={handleCloseImages}
-      />
-
-      {open && (
-        <ProductDialog
-          open={open}
-          onClose={() => {
-            setOpen(false);
-            setMode("add");
-            getAllProductList();
-          }}
-          mode={mode}
-          product={productDetails}
-        />
-      )}
-
-      <Grid sx={{ paddingBottom: "2rem" }}>
-        <Typography variant="h6" color="#525861">
-          Products List (
-          <span style={{ color: "#969ca5" }}>{totalCount} Products</span>)
-        </Typography>
-      </Grid>
-
-      <Grid
-        sx={{
-          paddingBottom: "2rem",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
-        <SearchField
-          label="Search by name"
-          setSearchString={setSearchString}
-          namesList={[]}
+        <ProductImagesDialog
+          open={openImageDialog}
+          images={selectedImages}
+          onClose={handleCloseImages}
         />
 
-        <Grid sx={{ marginTop: "0.5rem", display: "flex" }}>
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{ height: "2.5rem", marginRight: "0.5rem" }}
-            onClick={() => {
-              setOpen(true);
-              setProductDetails({});
+        {open && (
+          <ProductDialog
+            open={open}
+            onClose={() => {
+              setOpen(false);
+              setMode("add");
+              getAllProductList();
             }}
-          >
-            Add New Product
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{ width: "10rem", height: "2.5rem" }}
-            onClick={handleExport}
-          >
-            Export
-          </Button>
-        </Grid>
-      </Grid>
+            mode={mode}
+            product={productDetails}
+          />
+        )}
 
-      <Paper elevation={3} sx={{ padding: "1rem", borderRadius: "0.5rem" }}>
-        <TableContainer sx={{ maxHeight: 500, overflow: "auto" }}>
-          <Table sx={{ width: "100%" }} aria-label="products table">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={styles.tableHeaderCell}>Name</TableCell>
-                <TableCell sx={styles.tableHeaderCell}>Price</TableCell>
-                <TableCell sx={styles.tableHeaderCell}>Company Name</TableCell>
-                <TableCell sx={styles.tableHeaderCell}>User</TableCell>
-                <TableCell sx={styles.tableHeaderCell}>Description</TableCell>
-                <TableCell sx={styles.tableHeaderCell}>Images</TableCell>
-                <TableCell align="right" sx={styles.tableHeaderCell}>
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {productList
-                ?.slice(
-                  (page - 1) * rowsPerPage,
-                  (page - 1) * rowsPerPage + rowsPerPage
-                )
-                .map((product) => (
-                  <TableRow key={product._id}>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell>{product.price}</TableCell>
-                    <TableCell>{product.company}</TableCell>
-                    <TableCell>{product?.product_name}</TableCell>
-                    <TableCell>{product?.productDescription}</TableCell>
-                    <TableCell>
-                      {product?.productImages?.length > 0 ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleOpenImages(product.productImages)}
+        <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+          <Grid container alignItems="center" justifyContent="space-between" spacing={2}>
+            <Grid item>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: '#212121' }}>
+                Product Management
+                <Typography component="span" variant="body1" sx={{ ml: 1.5, color: '#878787' }}>
+                  ({totalCount} Items)
+                </Typography>
+              </Typography>
+            </Grid>
+            <Grid item sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon fontSize="small" />}
+                sx={styles.actionButton}
+                onClick={() => {
+                  setOpen(true);
+                  setProductDetails({});
+                }}
+              >
+                Add New Product
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                sx={styles.actionButton}
+                onClick={handleExport}
+              >
+                Export CSV
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+          <SearchField
+            label="Search by product name..."
+            setSearchString={setSearchString}
+            namesList={[]}
+          />
+        </Paper>
+
+        <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e0e0e0', overflow: 'hidden' }}>
+          <TableContainer sx={{ maxHeight: 600 }}>
+            <Table stickyHeader aria-label="products table">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={styles.tableHeaderCell}>PRODUCT</TableCell>
+                  <TableCell sx={styles.tableHeaderCell}>PRICE</TableCell>
+                  <TableCell sx={styles.tableHeaderCell}>BRAND</TableCell>
+                  <TableCell sx={styles.tableHeaderCell}>OWNER</TableCell>
+                  <TableCell sx={styles.tableHeaderCell}>DESCRIPTION</TableCell>
+                  <TableCell align="right" sx={styles.tableHeaderCell}>ACTIONS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {productList
+                  ?.slice(
+                    (page - 1) * rowsPerPage,
+                    (page - 1) * rowsPerPage + rowsPerPage
+                  )
+                  .map((product) => (
+                    <TableRow key={product._id} hover>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box
+                            sx={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: '4px',
+                              overflow: 'hidden',
+                              border: '1px solid #eee',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: '#fff',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => handleOpenImages(product.productImages)}
+                          >
+                            {product?.productImages?.length > 0 ? (
+                              <img
+                                src={product.productImages[0]}
+                                alt={product.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                              />
+                            ) : (
+                              <Typography variant="caption" color="text.disabled">No Image</Typography>
+                            )}
+                          </Box>
+                          <Typography sx={{ fontWeight: 500 }}>{product.name}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>₹{product.price}</TableCell>
+                      <TableCell>{product.company}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ color: '#2874f0', bgcolor: '#e3f2fd', px: 1, py: 0.5, borderRadius: '4px', display: 'inline-block', fontWeight: 500 }}>
+                          {product?.product_name || 'System'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary" sx={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 1,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {product?.productDescription}
+                        </Typography>
+                      </TableCell>
+
+                      <TableCell align="right">
+                        <IconButton
+                          onClick={(e) => handleMenuClick(e, product?._id)}
+                          sx={{ color: '#2874f0' }}
                         >
-                          View Images ({product.productImages.length})
-                        </Button>
-                      ) : (
-                        "No Images"
-                      )}
-                    </TableCell>
-
-                    <TableCell align="right">
-                      <IconButton
-                        onClick={(e) => handleMenuClick(e, product?._id)}
-                        color="primary"
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                      <Menu
-                        anchorEl={anchorEl}
-                        open={Boolean(anchorEl) && currentProductId === product?._id}
-                        onClose={() => setAnchorEl(null)}
-                      >
-                        <MenuItem
-                          onClick={() => {
-                            handleEdit(product);
-                            setAnchorEl(null);
+                          <MoreVertIcon />
+                        </IconButton>
+                        <Menu
+                          anchorEl={anchorEl}
+                          open={Boolean(anchorEl) && currentProductId === product?._id}
+                          onClose={() => setAnchorEl(null)}
+                          PaperProps={{
+                            elevation: 2,
+                            sx: { borderRadius: '8px', minWidth: '120px' }
                           }}
                         >
-                          <Tooltip title="Edit">
-                            <EditIcon color="primary" />
-                          </Tooltip>
-                        </MenuItem>
-                        <MenuItem
-                          onClick={() => {
-                            handleDelete(product?._id);
-                            setAnchorEl(null);
-                          }}
-                        >
-                          <Tooltip title="Delete">
-                            <DeleteIcon color="primary" />
-                          </Tooltip>
-                        </MenuItem>
-                      </Menu>
+                          <MenuItem
+                            onClick={() => {
+                              handleEdit(product);
+                              setAnchorEl(null);
+                            }}
+                          >
+                            <EditIcon fontSize="small" color="primary" sx={{ mr: 1.5 }} />
+                            Edit
+                          </MenuItem>
+                          <MenuItem
+                            onClick={() => {
+                              handleDelete(product?._id);
+                              setAnchorEl(null);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" color="error" sx={{ mr: 1.5 }} />
+                            Delete
+                          </MenuItem>
+                        </Menu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                {!isLoading && productList.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                      <Typography variant="body1" color="text.secondary">
+                        No products found in inventory
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Grid
-          container
-          justifyContent="flex-end"
-          sx={{ marginTop: "16px", paddingBottom: "16px" }}
-        >
-          <Pagination
-            count={Math.ceil((productList?.length || 0) / rowsPerPage)}
-            page={page}
-            onChange={handleChangePage}
-            color="primary"
-          />
-        </Grid>
-      </Paper>
-    </Container>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Box
+            sx={{
+              p: 2,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              borderTop: '1px solid #f0f0f0',
+              bgcolor: '#fff'
+            }}
+          >
+            <Pagination
+              count={Math.ceil((productList?.length || 0) / rowsPerPage)}
+              page={page}
+              onChange={handleChangePage}
+              color="primary"
+              shape="rounded"
+              size="large"
+            />
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 

@@ -152,84 +152,100 @@ const ProductPage = () => {
   );
 
   return (
-    <Grid container spacing={3} padding={3}>
-      <Grid container justifyContent="center" mt={3} mb={2}>
-        <Grid item xs={12} sm={8}>
-          <CustomizedInputBase onSearch={setSearchProduct} />
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 4 }}>
+      <Grid container spacing={3} sx={{ px: { xs: 2, md: 4 } }}>
+        <Grid container justifyContent="center" mb={4}>
+          <Grid item xs={12} sm={8} md={6}>
+            <CustomizedInputBase onSearch={setSearchProduct} />
+          </Grid>
         </Grid>
+
+        <Backdrop
+          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={isLoading || isAddingToCart}
+        >
+          <CircularProgress color="inherit" />
+        </Backdrop>
+
+        <Snackbar
+          open={open}
+          autoHideDuration={3000}
+          onClose={handleClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert onClose={handleClose} severity={severity} sx={{ width: "100%", borderRadius: '8px', boxShadow: 3 }}>
+            {respMsg}
+          </Alert>
+        </Snackbar>
+
+        {/* Error State */}
+        {error && (
+          <Grid container justifyContent="center" mt={4}>
+            <Box textAlign="center" p={4} bgcolor="white" borderRadius="8px" border="1px solid #f0f0f0">
+              <Typography color="error" variant="h6" gutterBottom>
+                {error.message || "Failed to fetch products"}
+              </Typography>
+              <Typography color="textSecondary">
+                Please check your connection and try refreshing the page
+              </Typography>
+            </Box>
+          </Grid>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && !error && allProducts.length === 0 && (
+          <Grid container justifyContent="center" mt={4}>
+            <Box textAlign="center" p={4} bgcolor="white" borderRadius="8px" border="1px solid #f0f0f0">
+              <Typography color="textSecondary" variant="h6">
+                {searchProduct ? "No products match your search" : "No products available at the moment"}
+              </Typography>
+            </Box>
+          </Grid>
+        )}
+
+        {/* Product Grid */}
+        <Grid item xs={12}>
+          <Grid container spacing={2}>
+            <Suspense fallback={null}>
+              {allProducts.map((prod) => (
+                <ProductCard
+                  key={prod._id}
+                  prod={prod}
+                  selectedMainImages={selectedMainImages}
+                  thumbnailIndex={thumbnailIndex}
+                  handlePrev={handlePrev}
+                  handleNext={handleNext}
+                  handleThumbnailClick={handleThumbnailClick}
+                  handleAddToCart={handleAddToCart}
+                />
+              ))}
+            </Suspense>
+          </Grid>
+        </Grid>
+
+        {/* Load More Button */}
+        {!isLoading && data && page < data.totalPages && (
+          <Grid container justifyContent="center" mt={6} mb={4}>
+            <Button
+              variant="contained"
+              onClick={loadMoreProducts}
+              disabled={isFetching}
+              sx={{
+                px: 6,
+                py: 1,
+                borderRadius: '4px',
+                textTransform: 'none',
+                fontWeight: 700,
+                boxShadow: 2
+              }}
+              startIcon={isFetching && <CircularProgress size={20} color="inherit" />}
+            >
+              {isFetching ? 'Loading Products...' : 'Load More'}
+            </Button>
+          </Grid>
+        )}
       </Grid>
-
-      <Backdrop
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={isLoading || isAddingToCart}
-      >
-        <CircularProgress color="inherit" />
-      </Backdrop>
-
-      <Snackbar
-        open={open}
-        autoHideDuration={3000}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert onClose={handleClose} severity={severity} sx={{ width: "100%" }}>
-          {respMsg}
-        </Alert>
-      </Snackbar>
-
-      {/* Error State */}
-      {error && (
-        <Grid container justifyContent="center" mt={4}>
-          <Box textAlign="center">
-            <Typography color="error" variant="h6">
-              {error.message || "Failed to fetch products"}
-            </Typography>
-            <Typography color="textSecondary">
-              Please try refreshing the page
-            </Typography>
-          </Box>
-        </Grid>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && !error && allProducts.length === 0 && (
-        <Grid container justifyContent="center" mt={4}>
-          <Typography color="textSecondary" variant="h6">
-            {searchProduct ? "No products match your search" : "No products available"}
-          </Typography>
-        </Grid>
-      )}
-
-      {/* Product Grid */}
-      <Grid item xs={12}>
-        <Grid container spacing={3}>
-          <Suspense fallback={null}>
-            {allProducts.map((prod) => (
-              <ProductCard
-                key={prod._id}
-                prod={prod}
-                selectedMainImages={selectedMainImages}
-                thumbnailIndex={thumbnailIndex}
-                handlePrev={handlePrev}
-                handleNext={handleNext}
-                handleThumbnailClick={handleThumbnailClick}
-                handleAddToCart={handleAddToCart}
-              />
-            ))}
-          </Suspense>
-        </Grid>
-      </Grid>
-
-      {/* Load More Button */}
-      {!isLoading && data && page < data.totalPages && (
-        <Grid container justifyContent="center" mt={4} mb={4}>
-          <CircularProgress size={24} sx={{ display: isFetching ? 'block' : 'none', mr: 2 }} />
-          <button onClick={loadMoreProducts} disabled={isFetching}>
-            {isFetching ? 'Loading...' : 'Load More'}
-          </button>
-        </Grid>
-      )}
-    </Grid>
+    </Box>
   );
 };
 

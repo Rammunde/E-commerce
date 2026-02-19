@@ -158,7 +158,7 @@ const Cart = () => {
   };
 
   const getAddedItems = useCallback(async () => {
-    const userId = localStorage.getItem("userId");
+    const userId = getUserId();
     if (!userId) {
       setLoading(false);
       return;

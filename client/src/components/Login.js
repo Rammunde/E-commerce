@@ -1,22 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
+  Container,
+  Paper,
+  Grid,
   TextField,
   Button,
-  Paper,
-  Container,
-  Grid,
   IconButton,
   InputAdornment,
   Typography,
   Alert,
   CircularProgress,
+  Box,
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
+import { useLoginUserMutation } from "../redux/apiSlice";
 import { useDispatch } from "react-redux";
 import { setUser } from "../redux/appSlice";
-import { useLoginUserMutation } from "../redux/apiSlice";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -26,160 +27,171 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [respMsg, setRespMsg] = useState("");
-  const [checkValidate, setCheckValidate] = useState(false);
   const [loginUser, { isLoading }] = useLoginUserMutation();
 
-  const handleLogin = async () => {
-    setCheckValidate(true);
-    if (!username?.trim() || !password) return;
+  // Redirect if already logged in
+  useEffect(() => {
+    const auth = localStorage.getItem("user");
+    if (auth) {
+      navigate("/product");
+    }
+  }, [navigate]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setRespMsg("Please enter both username and password");
+      return;
+    }
 
     try {
-      const data = await loginUser({ username, password }).unwrap();
-
-      if (data.err === false) {
-        setRespMsg(data?.msg);
-        localStorage.setItem("user", JSON.stringify(data));
-        localStorage.setItem("userId", data?.data?._id);
-
-        // Update Redux User State to trigger Nav update
-        dispatch(setUser(data));
-
-        // Navigate based on role
-        navigate(data?.data?.role === "Admin" ? "/user-management" : "/product");
-      } else {
-        setRespMsg(data?.msg || "Login failed");
-        localStorage.clear();
+      const result = await loginUser({ username, password }).unwrap();
+      if (result) {
+        dispatch(setUser(result));
+        localStorage.setItem("user", JSON.stringify(result));
+        setRespMsg("Login successful!");
+        setTimeout(() => navigate("/product"), 1000);
       }
     } catch (err) {
-      setRespMsg(err?.data?.msg || "Failed to login. Please try again.");
-    } finally {
-      setCheckValidate(false);
+      setRespMsg(err?.data?.msg || "Login failed. Please try again.");
     }
   };
 
-  const handleCloseAlert = () => {
-    setRespMsg("");
-  };
-
-  const handleClearForm = () => {
+  const clearForm = () => {
     setUsername("");
     setPassword("");
-    setCheckValidate(false);
     setRespMsg("");
   };
 
   return (
-    <Container
-      component="main"
-      maxWidth="xs"
+    <Box
       sx={{
+        minHeight: "100vh",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
-        marginTop: 8,
+        justifyContent: "center",
+        backgroundColor: "#f1f3f6",
+        py: 4,
       }}
     >
-      <Paper
-        elevation={3}
-        sx={{
-          padding: "32px 24px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          borderRadius: 2,
-          width: "100%",
-          marginTop: 8,
-        }}
-      >
-        <Grid container spacing={2}>
+      <Container maxWidth="xs">
+        <Paper
+          elevation={1}
+          sx={{
+            padding: "40px 32px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            borderRadius: "4px",
+            backgroundColor: "#fff",
+          }}
+        >
+          <Box sx={{ width: "100%", textAlign: "left", mb: 4 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: "#212121", mb: 1 }}>
+              Login
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#878787" }}>
+              Get access to your Orders, Wishlist and Recommendations
+            </Typography>
+          </Box>
+
           {respMsg && (
-            <Grid item xs={12}>
-              <Alert
-                onClose={handleCloseAlert}
-                severity={respMsg.includes("failed") || respMsg.includes("Failed") ? "error" : "success"}
-                sx={{ marginBottom: 2 }}
-              >
-                {respMsg}
-              </Alert>
-            </Grid>
+            <Alert
+              severity={respMsg.toLowerCase().includes("failed") ? "error" : "success"}
+              sx={{ width: "100%", mb: 3 }}
+            >
+              {respMsg}
+            </Alert>
           )}
-          <Grid item xs={12}>
-            <Typography variant="h5">Login</Typography>
-            <form style={{ width: "100%", marginBottom: 16 }} onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Username"
-                    variant="outlined"
-                    error={checkValidate && !username?.trim()}
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    autoComplete="off"
-                    name="username"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Password"
-                    variant="outlined"
-                    error={checkValidate && !password}
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowPassword(!showPassword)}
-                            edge="end"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                    autoComplete="off"
-                    name="password"
-                  />
-                </Grid>
+
+          <form style={{ width: "100%" }} onSubmit={handleLogin}>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Enter Username"
+                  variant="standard"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  sx={{
+                    "& .MuiInput-underline:after": { borderBottomColor: "#2874f0" },
+                    "& .MuiInputLabel-root.Mui-focused": { color: "#2874f0" },
+                  }}
+                />
               </Grid>
-              <Grid container spacing={2} sx={{ paddingTop: "20px" }}>
-                <Grid item xs={6}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    color="primary"
-                    onClick={handleClearForm}
-                  >
-                    Cancel
-                  </Button>
-                </Grid>
-                <Grid item xs={6}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="primary"
-                    type="submit"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? <CircularProgress size={24} /> : "Log In"}
-                  </Button>
-                </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Enter Password"
+                  variant="standard"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  sx={{
+                    "& .MuiInput-underline:after": { borderBottomColor: "#2874f0" },
+                    "& .MuiInputLabel-root.Mui-focused": { color: "#2874f0" },
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
               </Grid>
-            </form>
-          </Grid>
-        </Grid>
-        <div style={{ paddingTop: "20px", textAlign: "center" }}>
-          <Typography variant="body2">
-            Don't have an account? <Link to="/signup">Sign up</Link>
-          </Typography>
-        </div>
-      </Paper>
-    </Container>
+              <Grid item xs={12}>
+                <Typography variant="body2" sx={{ color: "#878787", fontSize: "12px", mb: 2 }}>
+                  By continuing, you agree to Shopveda's Terms of Use and Privacy Policy.
+                </Typography>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  type="submit"
+                  disabled={isLoading}
+                  sx={{
+                    py: 1.5,
+                    backgroundColor: "#fb641b",
+                    color: "#fff",
+                    fontWeight: 600,
+                    borderRadius: "2px",
+                    boxShadow: "0 1px 2px 0 rgba(0,0,0,.2)",
+                    "&:hover": {
+                      backgroundColor: "#f4511e",
+                    },
+                  }}
+                >
+                  {isLoading ? <CircularProgress size={24} color="inherit" /> : "Login"}
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+
+          <Box sx={{ mt: 4, width: "100%", textAlign: "center" }}>
+            <Link
+              to="/signup"
+              style={{
+                color: "#2874f0",
+                textDecoration: "none",
+                fontWeight: 600,
+                fontSize: "14px",
+              }}
+            >
+              New to Shopveda? Create an account
+            </Link>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 
 export default LoginPage;
-

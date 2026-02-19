@@ -107,10 +107,9 @@ const Nav = () => {
   // Render Mobile Drawer
   const drawer = (
     <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
-      <Box sx={{ py: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-        <DashboardIcon color="primary" />
-        <Typography variant="h6" sx={{ my: 2, fontWeight: 'bold' }}>
-          E-Commerce
+      <Box sx={{ py: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, bgcolor: 'primary.main', color: 'white' }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '0.5px' }}>
+          Shopveda
         </Typography>
       </Box>
       <Divider />
@@ -149,35 +148,29 @@ const Nav = () => {
   );
 
   return (
-    <AppBar position="sticky" sx={{ background: 'linear-gradient(90deg, #06042cff 0%, #090979 35%, #00d4ff 100%)', color: 'white', boxShadow: 3 }}>
+    <AppBar position="sticky" elevation={0} sx={{ backgroundColor: 'primary.main', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           {/* LOGO - Desktop */}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, mr: 1, alignItems: 'center' }}>
             <Box
-              component="a"
               onClick={() => navigate(isAdmin ? '/user-management' : '/product')}
               sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
             >
-              <img
-                src="https://img.etimg.com/thumb/msid-100973430,width-650,height-488,imgsize-2985114,resizemode-75/indian-ecommerce-market.jpg"
-                alt="Logo"
-                style={{ height: 40, width: 40, borderRadius: '50%', objectFit: 'cover', marginRight: 10 }}
-              />
               <Typography
-                variant="h6"
+                variant="h5"
                 noWrap
                 sx={{
                   mr: 2,
                   display: { xs: 'none', md: 'flex' },
-                  fontFamily: 'monospace',
-                  fontWeight: 700,
-                  letterSpacing: '.1rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.5px',
                   color: 'inherit',
                   textDecoration: 'none',
+                  fontStyle: 'italic'
                 }}
               >
-                E-COMM
+                Shopveda
               </Typography>
             </Box>
           </Box>
@@ -196,23 +189,22 @@ const Nav = () => {
           </Box>
           <Box sx={{ display: { xs: 'flex', md: 'none' }, flexGrow: 1, alignItems: 'center' }}>
             <Typography
-              variant="h5"
+              variant="h6"
               noWrap
               component="a"
               onClick={() => navigate('/product')}
               sx={{
-                mr: 2,
-                display: { xs: 'flex', md: 'none' },
                 flexGrow: 1,
-                fontFamily: 'monospace',
-                fontWeight: 700,
-                letterSpacing: '.1rem',
+                display: { xs: 'flex', md: 'none' },
+                fontWeight: 800,
+                letterSpacing: '0.5px',
                 color: 'inherit',
                 textDecoration: 'none',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontStyle: 'italic'
               }}
             >
-              E-COMM
+              Shopveda
             </Typography>
           </Box>
 
