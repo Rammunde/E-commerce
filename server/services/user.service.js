@@ -2,7 +2,8 @@ const ecomDB = require("../db/dbConnection");
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const { ObjectId } = require('mongodb');
-require('dotenv').config();
+const config = require('../config');
+const { ACTIVE_CART } = require('../common/collectionNames');
 
 module.exports = {
   registerUser,
@@ -12,7 +13,8 @@ module.exports = {
   loginUser,
   deleteUser,
   editUser,
-  sendMailToOwner
+  sendMailToOwner,
+  bulkUploadUsers
 };
 
 async function registerUser(req, res) {
@@ -77,7 +79,27 @@ async function getAllAvailableUsers(req, res) {
     const pipeline = [
       {
         $addFields: {
-          name: { $concat: ["$firstName", " ", "$lastName"] }
+          name: { $concat: ["$firstName", " ", "$lastName"] },
+          userIdStr: { $toString: "$_id" }
+        }
+      },
+      {
+        $lookup: {
+          from: ACTIVE_CART,
+          localField: "userIdStr",
+          foreignField: "userId",
+          as: "cartItems"
+        }
+      },
+      {
+        $addFields: {
+          hasCartData: { $gt: [{ $size: "$cartItems" }, 0] }
+        }
+      },
+      {
+        $project: {
+          cartItems: 0,
+          userIdStr: 0
         }
       }
     ];
@@ -88,12 +110,26 @@ async function getAllAvailableUsers(req, res) {
 
     pipeline.push({ $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } });
 
-    const users = await collection.aggregate(pipeline).toArray();
+    // Server-side pagination using $facet
+    const finalPipeline = [
+      ...pipeline,
+      {
+        $facet: {
+          data: [
+            { $skip: parseInt(offset) },
+            { $limit: parseInt(limit) }
+          ],
+          totalCount: [
+            { $count: "count" }
+          ]
+        }
+      }
+    ];
 
-    let totalCount = 0;
-    if (users.length > 0) {
-      totalCount = users.length;
-    }
+    const result = await collection.aggregate(finalPipeline).toArray();
+
+    const users = result[0]?.data || [];
+    const totalCount = result[0]?.totalCount[0]?.count || 0;
 
     res.json({
       data: users,
@@ -129,17 +165,19 @@ async function getAllUserToExport(req, res) {
     }
 
     pipeline.push({ $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
-      { $project: { _id: 0, name: 1, username: 1, mobile: 1, email: 1 } });
+      { $project: { _id: 0, firstName: 1, lastName: 1, mobile: 1, email: 1, username: 1, role: 1 } });
 
     const users = await collection.aggregate(pipeline).toArray();
     const mapUsers = [];
 
     for (element of users) {
       let obj = {};
-      obj['Name'] = element.name;
-      obj['User Name'] = element.username;
-      obj['Mobile'] = element.mobile;
-      obj['Email'] = element.email;
+      obj['First Name'] = element.firstName || "";
+      obj['Last Name'] = element.lastName || "";
+      obj['User Name'] = element.username || "";
+      obj['Mobile No'] = element.mobile || "";
+      obj['Email'] = element.email || "";
+      obj['Role'] = element.role || "User";
       mapUsers.push(obj);
     }
 
@@ -192,20 +230,25 @@ async function editUser(req, res) {
       username,
       password,
       email,
-      mobile } = req.body;
+      mobile,
+      role } = req.body;
 
     const collection = await ecomDB.connectUsersDB();
     if (!userId) {
       return res.status(400).json({ err: true, msg: 'Invalid user ID' });
     }
 
+    const { fullName } = req.body; // In case fullName is also passed
+
     const userUpdate = {
       firstName,
       lastName,
+      fullName: fullName || `${firstName} ${lastName}`,
       username,
       password,
       email,
-      mobile
+      mobile,
+      role
     };
 
     const result = await collection.updateOne({ _id: new ObjectId(userId) }, { $set: userUpdate });
@@ -274,8 +317,8 @@ async function loginUser(req, res) {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    user: config.EMAIL_USER,
+    pass: config.EMAIL_PASS
   },
 });
 
@@ -284,13 +327,13 @@ async function sendMailToOwner(req, res) {
   const { name, mobileNo, emailId, message } = req.body;
 
   try {
-    if (!process.env.EMAIL_USER) {
+    if (!config.EMAIL_USER) {
       throw new Error("Server email configuration missing");
     }
 
     const mailOptions = {
-      from: `"${name}" <${process.env.EMAIL_USER}>`, // Send from authenticated server email
-      to: process.env.EMAIL_USER, // Send TO the owner
+      from: `"${name}" <${config.EMAIL_USER}>`, // Send from authenticated server email
+      to: config.EMAIL_USER, // Send TO the owner
       replyTo: emailId, // User's email for reply
       subject: `New Contact Message from ${name}`,
       html: `
@@ -311,5 +354,71 @@ async function sendMailToOwner(req, res) {
   } catch (error) {
     console.error("Error sending contact email:", error);
     res.status(500).json({ err: true, msg: "Failed to send message. Please try again later." });
+  }
+}
+
+async function bulkUploadUsers(req, res) {
+  try {
+    const { usersData } = req.body;
+    if (!usersData || !Array.isArray(usersData)) {
+      return res.status(400).json({ err: true, msg: "Invalid user data provided" });
+    }
+
+    const collection = await ecomDB.connectUsersDB();
+    const results = {
+      total: usersData.length,
+      inserted: 0,
+      duplicates: 0,
+      errors: 0
+    };
+
+    for (const userData of usersData) {
+      try {
+        const { firstName, lastName, mobile, username: provUsername, email: provEmail, role: provRole } = userData;
+
+        if (!firstName || !lastName || !mobile) {
+          results.errors++;
+          continue;
+        }
+
+        const username = provUsername && provUsername.trim() ? provUsername : firstName.toLowerCase();
+        const email = provEmail && provEmail.trim() ? provEmail : `${firstName.toLowerCase()}@gmail.com`;
+        const fullName = `${firstName} ${lastName}`;
+        const password = "Abcd@123";
+
+        // Check for duplicate email
+        const isExist = await collection.findOne({ email });
+        if (isExist) {
+          results.duplicates++;
+          continue;
+        }
+
+        const newUser = {
+          firstName,
+          lastName,
+          fullName,
+          email,
+          username,
+          password,
+          mobile,
+          role: provRole && provRole.trim() ? provRole : "User"
+        };
+
+        await collection.insertOne(newUser);
+        results.inserted++;
+      } catch (err) {
+        console.error("Error inserting user during bulk upload:", err);
+        results.errors++;
+      }
+    }
+
+    res.status(200).json({
+      err: false,
+      msg: `Bulk upload completed. ${results.inserted} inserted, ${results.duplicates} duplicates skipped, ${results.errors} errors.`,
+      data: results
+    });
+  } catch (error) {
+    console.error("Error in bulkUploadUsers:", error);
+    res.status(500).json({ err: true, msg: "Internal Server Error" });
   }
 }

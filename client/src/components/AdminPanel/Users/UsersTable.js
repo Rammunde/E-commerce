@@ -56,6 +56,7 @@ const styles = {
 
 const UsersTable = () => {
   const initialSearchRender = useRef(true);
+  const fileInputRef = useRef(null);
   const [users, setUsers] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -77,8 +78,8 @@ const UsersTable = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           searchString,
-          limit: 100, // Load more for local pagination if needed, or stick to server
-          offset: 0,
+          limit: rowsPerPage,
+          offset: (page - 1) * rowsPerPage,
           sortBy: "name",
           sortOrder: "asc",
         }),
@@ -97,19 +98,11 @@ const UsersTable = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [searchString]);
-
-  useEffect(() => {
-    if (initialSearchRender.current) {
-      initialSearchRender.current = false;
-    } else {
-      getAllUserList();
-    }
-  }, [searchString, getAllUserList]);
+  }, [searchString, page, rowsPerPage]);
 
   useEffect(() => {
     getAllUserList();
-  }, []);
+  }, [getAllUserList]);
 
   const handleUserMenuClick = (event, userId) => {
     setAnchorEl(event.currentTarget);
@@ -197,6 +190,95 @@ const UsersTable = () => {
     }
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target.result;
+      const lines = text.split("\n");
+      const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ''));
+
+      const firstNameIdx = headers.findIndex(h => h.toLowerCase() === 'first name' || h.toLowerCase() === 'firstname');
+      const lastNameIdx = headers.findIndex(h => h.toLowerCase() === 'last name' || h.toLowerCase() === 'lastname');
+      const mobileIdx = headers.findIndex(h => h.toLowerCase() === 'mobile no' || h.toLowerCase() === 'mobile');
+      const usernameIdx = headers.findIndex(h => h.toLowerCase() === 'user name' || h.toLowerCase() === 'username');
+      const emailIdx = headers.findIndex(h => h.toLowerCase() === 'email');
+      const roleIdx = headers.findIndex(h => h.toLowerCase() === 'role');
+
+      if (firstNameIdx === -1 || lastNameIdx === -1 || mobileIdx === -1) {
+        setSnackbar({
+          open: true,
+          message: "CSV must contain columns: First Name, Last Name, Mobile No",
+          severity: "error",
+        });
+        return;
+      }
+
+      const usersData = [];
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const columns = lines[i].split(",").map(c => c.trim().replace(/"/g, ''));
+        if (columns.length < headers.length) continue;
+
+        usersData.push({
+          firstName: columns[firstNameIdx],
+          lastName: columns[lastNameIdx],
+          mobile: columns[mobileIdx],
+          username: usernameIdx !== -1 ? columns[usernameIdx] : undefined,
+          email: emailIdx !== -1 ? columns[emailIdx] : undefined,
+          role: roleIdx !== -1 ? columns[roleIdx] : undefined
+        });
+      }
+
+      if (usersData.length === 0) {
+        setSnackbar({
+          open: true,
+          message: "No user data found in CSV",
+          severity: "warning",
+        });
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/bulkUploadUsers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usersData }),
+        });
+        const data = await response.json();
+
+        setSnackbar({
+          open: true,
+          message: data.msg,
+          severity: data.err ? "error" : "success",
+        });
+
+        if (!data.err) {
+          getAllUserList();
+        }
+      } catch (error) {
+        setSnackbar({
+          open: true,
+          message: "Failed to upload users",
+          severity: "error",
+        });
+      } finally {
+        setIsLoading(true);
+        setIsLoading(false);
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be uploaded again if needed
+    event.target.value = "";
+  };
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -263,12 +345,27 @@ const UsersTable = () => {
                 Add New User
               </Button>
               <Button
-                variant="outlined"
+                variant="contained"
                 color="primary"
                 sx={styles.actionButton}
                 onClick={handleExport}
               >
                 Export CSV
+              </Button>
+              <input
+                type="file"
+                accept=".csv"
+                style={{ display: 'none' }}
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                sx={styles.actionButton}
+                onClick={handleUploadClick}
+              >
+                Upload CSV
               </Button>
             </Grid>
           </Grid>
@@ -277,7 +374,10 @@ const UsersTable = () => {
         <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: '8px', border: '1px solid #e0e0e0' }}>
           <SearchField
             label="Search users by name..."
-            setSearchString={setSearchString}
+            setSearchString={(val) => {
+              setSearchString(val);
+              setPage(1);
+            }}
             namesList={nameList}
           />
         </Paper>
@@ -291,15 +391,12 @@ const UsersTable = () => {
                   <TableCell sx={styles.tableHeaderCell}>USERNAME</TableCell>
                   <TableCell sx={styles.tableHeaderCell}>MOBILE</TableCell>
                   <TableCell sx={styles.tableHeaderCell}>EMAIL</TableCell>
+                  <TableCell sx={styles.tableHeaderCell}>ROLE</TableCell>
                   <TableCell align="right" sx={styles.tableHeaderCell}>ACTIONS</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {users
-                  ?.slice(
-                    (page - 1) * rowsPerPage,
-                    (page - 1) * rowsPerPage + rowsPerPage
-                  )
                   .map((user) => (
                     <TableRow key={user._id} hover>
                       <TableCell sx={{ fontWeight: 500 }}>
@@ -308,6 +405,7 @@ const UsersTable = () => {
                       <TableCell>{user.username}</TableCell>
                       <TableCell>{user.mobile}</TableCell>
                       <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.role || 'User'}</TableCell>
                       <TableCell align="right">
                         <IconButton
                           onClick={(e) => handleUserMenuClick(e, user?._id)}
@@ -333,15 +431,20 @@ const UsersTable = () => {
                             <EditIcon fontSize="small" color="primary" sx={{ mr: 1.5 }} />
                             Edit
                           </MenuItem>
-                          <MenuItem
-                            onClick={() => {
-                              handleDeleteUser(user?._id);
-                              setAnchorEl(null);
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" color="error" sx={{ mr: 1.5 }} />
-                            Delete
-                          </MenuItem>
+                          <Tooltip title={user.hasCartData ? "This user has some data in cart" : ""} placement="left">
+                            <span>
+                              <MenuItem
+                                disabled={user.hasCartData}
+                                onClick={() => {
+                                  handleDeleteUser(user?._id);
+                                  setAnchorEl(null);
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" color={user.hasCartData ? "disabled" : "error"} sx={{ mr: 1.5 }} />
+                                Delete
+                              </MenuItem>
+                            </span>
+                          </Tooltip>
                         </Menu>
                       </TableCell>
                     </TableRow>
@@ -368,7 +471,7 @@ const UsersTable = () => {
             }}
           >
             <Pagination
-              count={Math.ceil((users?.length || 0) / rowsPerPage)}
+              count={Math.ceil(totalCount / rowsPerPage)}
               page={page}
               onChange={handleChangePage}
               color="primary"

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../redux/appSlice';
 import { useGetCartCountQuery } from '../redux/apiSlice';
+import { PORTAL_NAME } from '../config';
 import {
   AppBar,
   Box,
@@ -109,7 +110,7 @@ const Nav = () => {
     <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
       <Box sx={{ py: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, bgcolor: 'primary.main', color: 'white' }}>
         <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '0.5px' }}>
-          Shopveda
+          {PORTAL_NAME}
         </Typography>
       </Box>
       <Divider />
@@ -170,7 +171,7 @@ const Nav = () => {
                   fontStyle: 'italic'
                 }}
               >
-                Shopveda
+                {PORTAL_NAME}
               </Typography>
             </Box>
           </Box>
@@ -204,7 +205,7 @@ const Nav = () => {
                 fontStyle: 'italic'
               }}
             >
-              Shopveda
+              {PORTAL_NAME}
             </Typography>
           </Box>
 
@@ -244,7 +245,7 @@ const Nav = () => {
             )}
 
             {/* Profile Menu */}
-            {isAuthenticated ? (
+            {isAuthenticated && (
               <>
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
                   <Avatar sx={{ bgcolor: 'white', color: 'primary.main' }}>
@@ -277,23 +278,6 @@ const Nav = () => {
                   </MenuItem>
                 </Menu>
               </>
-            ) : (
-              <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate('/login')}
-                  sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}
-                >
-                  Login
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={() => navigate('/signup')}
-                  sx={{ bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}
-                >
-                  Signup
-                </Button>
-              </Box>
             )}
           </Box>
         </Toolbar>

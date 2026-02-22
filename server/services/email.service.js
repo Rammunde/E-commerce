@@ -1,11 +1,10 @@
 const nodemailer = require("nodemailer");
+const config = require("../config");
 
 // Email configuration
-// For Gmail, use App Password (not regular password)
-// Generate at: https://myaccount.google.com/apppasswords
-
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS
+const EMAIL_USER = config.EMAIL_USER;
+const EMAIL_PASS = config.EMAIL_PASS;
+const PORTAL_NAME = config.PORTAL_NAME;
 
 // Create transporter
 const transporter = nodemailer.createTransport({
@@ -63,7 +62,7 @@ const generateOrderEmailHTML = (orderDetails) => {
     <body>
       <div class="container">
         <div class="header">
-          <h1 style="margin: 0;">🛒 Shopveda</h1>
+          <h1 style="margin: 0;">🛒 ${PORTAL_NAME}</h1>
           <h2 style="margin: 10px 0 0 0; font-weight: normal;">Order Confirmation</h2>
           <div class="success-badge">✓ Order Placed Successfully</div>
         </div>
@@ -126,7 +125,7 @@ const generateOrderEmailHTML = (orderDetails) => {
         </div>
         
         <div class="footer">
-          <p>© ${new Date().getFullYear()} Shopveda. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} ${PORTAL_NAME}. All rights reserved.</p>
           <p>This is an automated email. Please do not reply.</p>
         </div>
       </div>
@@ -143,9 +142,9 @@ const generateOrderEmailHTML = (orderDetails) => {
  */
 const sendOrderConfirmation = async (toEmail, orderDetails) => {
   const mailOptions = {
-    from: `"Shopveda" <${EMAIL_USER}>`,
+    from: `"${PORTAL_NAME}" <${EMAIL_USER}>`,
     to: toEmail,
-    subject: `Order Confirmed! #${orderDetails.orderId} - Shopveda`,
+    subject: `Order Confirmed! #${orderDetails.orderId} - ${PORTAL_NAME}`,
     html: generateOrderEmailHTML(orderDetails),
   };
 

@@ -18,6 +18,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useLoginUserMutation } from "../redux/apiSlice";
 import { useDispatch } from "react-redux";
 import { setUser } from "../redux/appSlice";
+import { PORTAL_NAME } from "../config";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -150,7 +151,7 @@ const LoginPage = () => {
               </Grid>
               <Grid item xs={12}>
                 <Typography variant="body2" sx={{ color: "#878787", fontSize: "12px", mb: 2 }}>
-                  By continuing, you agree to Shopveda's Terms of Use and Privacy Policy.
+                  By continuing, you agree to {PORTAL_NAME}'s Terms of Use and Privacy Policy.
                 </Typography>
                 <Button
                   fullWidth
@@ -185,7 +186,7 @@ const LoginPage = () => {
                 fontSize: "14px",
               }}
             >
-              New to Shopveda? Create an account
+              New to {PORTAL_NAME}? Create an account
             </Link>
           </Box>
         </Paper>

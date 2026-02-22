@@ -8,6 +8,8 @@ const productRoutes = require('./productRoutes');
 require('./db/config');
 const { updatePriceTypeScript } = require('./services/product.service');
 
+const config = require('./config');
+
 const app = express();
 
 // Middleware
@@ -23,7 +25,7 @@ app.use('/products', productRoutes);
 updatePriceTypeScript();
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = config.PORT;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

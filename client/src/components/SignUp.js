@@ -145,7 +145,7 @@ const SignUpPage = () => {
               Looks like you're new here!
             </Typography>
             <Typography variant="body2" sx={{ color: "#878787" }}>
-              Sign up with your mobile number to get started
+              Please fill following information to signup
             </Typography>
           </Box>
 

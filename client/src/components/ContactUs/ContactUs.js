@@ -23,6 +23,7 @@ import TwitterIcon from '@mui/icons-material/Twitter';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import { containerStyle, center } from "./Utils";
+import { PORTAL_NAME } from "../../config";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -210,7 +211,7 @@ const ContactUs = () => {
               <ContactInfoItem
                 icon={<LocationOnIcon sx={{ color: "primary.main" }} />}
                 title="Address"
-                content="123 Shopveda St, Tech City, IN 411001"
+                content={`123 ${PORTAL_NAME} St, Tech City, IN 411001`}
               />
               <ContactInfoItem
                 icon={<PhoneIcon sx={{ color: "primary.main" }} />}
@@ -220,7 +221,7 @@ const ContactUs = () => {
               <ContactInfoItem
                 icon={<EmailIcon sx={{ color: "primary.main" }} />}
                 title="Email"
-                content="support@shopveda.com"
+                content={`support@${PORTAL_NAME.toLowerCase()}.com`}
               />
             </Box>
 

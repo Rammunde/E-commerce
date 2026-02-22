@@ -9,6 +9,7 @@ import {
   DialogActions,
   Typography,
   CircularProgress,
+  MenuItem,
 } from "@mui/material";
 import Alert from "@mui/material/Alert";
 import IconButton from "@mui/material/IconButton";
@@ -39,6 +40,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
   const [userEmail, setUserEmail] = useState("");
   const [editUserId, setEditingUserId] = useState(0);
   const [userMobile, setUserMobile] = useState("");
+  const [userRole, setUserRole] = useState("User");
   const [respMsg, setRespMsg] = useState("");
   const [isError, setIsError] = useState(false);
   const [isUpdated, setIsUpdated] = useState(false);
@@ -56,6 +58,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
       setPassword(userData?.password || "");
       setUserMobile(userData?.mobile || "");
       setEditingUserId(userData?._id || 0);
+      setUserRole(userData?.role || "User");
     }
   }, [userData]);
 
@@ -66,6 +69,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
     setUserEmail("");
     setPassword("");
     setUserMobile("");
+    setUserRole("User");
     setEditingUserId(0);
     setRespMsg("");
     setIsUpdated(false);
@@ -91,7 +95,8 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
       userName?.trim() &&
       validatePassword(password) &&
       validateEmail(userEmail) &&
-      userMobile?.length === 10
+      userMobile?.length === 10 &&
+      userRole?.trim()
     );
   };
 
@@ -108,6 +113,7 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
       mobile: userMobile,
       username: userName,
       password,
+      role: userRole,
     };
 
     try {
@@ -222,6 +228,38 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
           <Grid item xs={12}>
             <TextField
               fullWidth
+              label="Email"
+              value={userEmail}
+              onChange={(e) => {
+                setUserEmail(e.target.value);
+                setIsUpdated(true);
+              }}
+              error={userEmail.length > 0 && !validateEmail(userEmail)}
+              helperText={
+                userEmail.length > 0 && !validateEmail(userEmail)
+                  ? "Enter a valid email"
+                  : ""
+              }
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              select
+              label="Role"
+              value={userRole}
+              onChange={(e) => {
+                setUserRole(e.target.value);
+                setIsUpdated(true);
+              }}
+            >
+              <MenuItem value="User">User</MenuItem>
+              <MenuItem value="Admin">Admin</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
               label="Username"
               value={userName}
               onChange={(e) => {
@@ -262,23 +300,6 @@ const NewUserCreation = ({ open, userData = {}, onResult = () => { } }) => {
                   </InputAdornment>
                 ),
               }}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Email"
-              value={userEmail}
-              onChange={(e) => {
-                setUserEmail(e.target.value);
-                setIsUpdated(true);
-              }}
-              error={userEmail.length > 0 && !validateEmail(userEmail)}
-              helperText={
-                userEmail.length > 0 && !validateEmail(userEmail)
-                  ? "Enter a valid email"
-                  : ""
-              }
             />
           </Grid>
         </Grid>
