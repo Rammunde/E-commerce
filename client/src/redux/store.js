@@ -2,10 +2,18 @@ import { configureStore } from "@reduxjs/toolkit";
 import appReducer from "./appSlice";
 import { apiSlice } from "./apiSlice";
 
-// Load state from localStorage
+// One-time migration: if there is no sessionStorage entry yet but one exists in
+// localStorage (from before the sessionStorage switch), carry it over and remove
+// the old localStorage key so the next tab open starts fresh.
+if (!sessionStorage.getItem("appState") && localStorage.getItem("appState")) {
+  sessionStorage.setItem("appState", localStorage.getItem("appState"));
+  localStorage.removeItem("appState");
+}
+
+// Load state from sessionStorage (clears automatically when the tab is closed)
 const loadState = () => {
   try {
-    const serializedState = localStorage.getItem("appState");
+    const serializedState = sessionStorage.getItem("appState");
     if (serializedState === null) return undefined;
     return JSON.parse(serializedState);
   } catch (e) {
@@ -14,12 +22,12 @@ const loadState = () => {
   }
 };
 
-// Save state to localStorage
+// Save state to sessionStorage
 const saveState = (state) => {
   try {
-    // Only persist the 'app' slice (user info etc)
+    // Only persist the 'app' slice (user info etc.)
     const serializedState = JSON.stringify(state.app);
-    localStorage.setItem("appState", serializedState);
+    sessionStorage.setItem("appState", serializedState);
   } catch (e) {
     console.warn("Could not save state", e);
   }

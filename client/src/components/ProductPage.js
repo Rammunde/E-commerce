@@ -13,6 +13,7 @@ import {
   CircularProgress,
   Typography,
   Box,
+  Button,
 } from "@mui/material";
 import { useDispatch } from "react-redux";
 import { useGetProductsQuery, useAddToCartMutation } from "../redux/apiSlice";
@@ -226,26 +227,26 @@ const ProductPage = () => {
         {/* Load More Button */}
         {!isLoading && data && page < data.totalPages && (
           <Grid container justifyContent="center" mt={6} mb={4}>
-            <Button
-              variant="contained"
-              onClick={loadMoreProducts}
-              disabled={isFetching}
-              sx={{
-                px: 6,
-                py: 1,
-                borderRadius: '4px',
-                textTransform: 'none',
-                fontWeight: 700,
-                boxShadow: 2
-              }}
-              startIcon={isFetching && <CircularProgress size={20} color="inherit" />}
-            >
-              {isFetching ? 'Loading Products...' : 'Load More'}
-            </Button>
+            {
+              isFetching
+                ? 'Loading Products...'
+                : (
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      loadMoreProducts();
+                    }}
+                    style={{ color: "blue", cursor: "pointer", textDecoration: "none" }}
+                  >
+                    Load More
+                  </a>
+                )
+            }
           </Grid>
         )}
       </Grid>
-    </Box>
+    </Box >
   );
 };
 

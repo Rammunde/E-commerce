@@ -21,11 +21,14 @@ import {
   Snackbar,
   Alert,
   Box,
+  LinearProgress,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddIcon from "@mui/icons-material/Add";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
 import SearchField from "../Users/SearchField";
 import ProductDialog from "./ProductDialog";
 import { useDispatch } from "react-redux";
@@ -61,6 +64,7 @@ const ProductTable = () => {
   const dispatch = useDispatch();
 
   const initialSearchRender = useRef(true);
+  const importInputRef = useRef(null);
   const [productList, setProductList] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -74,6 +78,7 @@ const ProductTable = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [importProgress, setImportProgress] = useState(null); // null | { done, total }
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   const handleOpenImages = (images) => {
@@ -161,53 +166,116 @@ const ProductTable = () => {
     }
   };
 
-  const handleExport = async () => {
+  // ─── EXPORT ──────────────────────────────────────────────────────────────────
+  const handleExport = () => {
     if (!productList?.length) {
-      setSnackbar({
-        open: true,
-        message: "No products to export",
-        severity: "warning",
-      });
+      setSnackbar({ open: true, message: "No products to export", severity: "warning" });
       return;
     }
-
     try {
-      // Generate CSV from current product list
-      const headers = ["Name", "Price", "Company", "Description"];
-      const csvHeaders = headers.join(",");
-      const csvRows = productList.map((product) =>
-        [
-          `"${product.name || ""}"`,
-          `"${product.price || ""}"`,
-          `"${product.company || ""}"`,
-          `"${product.productDescription || ""}"`,
-        ].join(",")
-      );
-      const csvContent = [csvHeaders, ...csvRows].join("\n");
-
-      // Download file
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const exportData = productList.map(({ userId, registrationDate, updatedAt, ...rest }) => rest);
+      const json = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "products_export.csv");
+      link.download = `products_export_${Date.now()}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-
-      setSnackbar({
-        open: true,
-        message: "Export successful",
-        severity: "success",
-      });
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: "Export failed",
-        severity: "error",
-      });
+      setSnackbar({ open: true, message: `${productList.length} product(s) exported successfully`, severity: "success" });
+    } catch {
+      setSnackbar({ open: true, message: "Export failed", severity: "error" });
     }
+  };
+
+  // ─── IMPORT ──────────────────────────────────────────────────────────────────
+  /** Convert a base64 data-URI string to a File object */
+  const base64ToFile = (dataUrl, filename) => {
+    const [header, base64] = dataUrl.split(",");
+    const mime = header.match(/:(.*?);/)[1];
+    const binary = atob(base64);
+    const arr = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+    return new File([arr], filename, { type: mime });
+  };
+
+  const handleImportFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so the same file can be re-selected later
+    e.target.value = "";
+
+    let products;
+    try {
+      const text = await file.text();
+      products = JSON.parse(text);
+      if (!Array.isArray(products) || !products.length) throw new Error();
+    } catch {
+      setSnackbar({ open: true, message: "Invalid file. Please select a valid products JSON file.", severity: "error" });
+      return;
+    }
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    const userId = user?.data?._id;
+    let successCount = 0;
+    let failCount = 0;
+    let skippedCount = 0;
+
+    // Build a Set of existing _ids for fast O(1) lookup
+    const existingIds = new Set(productList.map((p) => p._id));
+
+    setImportProgress({ done: 0, total: products.length });
+    setIsLoading(true);
+
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+
+      // ── Skip duplicates ──────────────────────────────────────────────────────
+      if (p._id && existingIds.has(p._id)) {
+        skippedCount++;
+        setImportProgress({ done: i + 1, total: products.length });
+        continue;
+      }
+      try {
+        const formData = new FormData();
+        formData.append("name", p.name || "");
+        formData.append("price", Number(p.price) || 0);
+        formData.append("originalPrice", Number(p.originalPrice || p.price) || 0);
+        formData.append("company", p.company || "");
+        formData.append("userId", userId || "");
+        formData.append("productDescription", p.productDescription || "");
+
+        // Convert base64 images to File blobs
+        if (Array.isArray(p.productImages)) {
+          p.productImages.forEach((imgBase64, idx) => {
+            if (typeof imgBase64 === "string" && imgBase64.startsWith("data:")) {
+              formData.append("productImages", base64ToFile(imgBase64, `image_${idx}.jpg`));
+            }
+          });
+        }
+
+        const resp = await fetch(`${API_BASE_URL}/products/addProduct`, { method: "POST", body: formData });
+        const data = await resp.json();
+        if (!data.err) successCount++; else failCount++;
+      } catch {
+        failCount++;
+      }
+      setImportProgress({ done: i + 1, total: products.length });
+    }
+
+    setIsLoading(false);
+    setImportProgress(null);
+    getAllProductList();
+    updateGlobalItemCount(userId, dispatch);
+
+    const parts = [];
+    if (successCount) parts.push(`${successCount} imported`);
+    if (skippedCount) parts.push(`${skippedCount} already existed (skipped)`);
+    if (failCount) parts.push(`${failCount} failed`);
+    const severity = failCount > 0 ? "warning" : skippedCount > 0 ? "info" : "success";
+    setSnackbar({ open: true, message: parts.join(', '), severity });
   };
 
   const handleChangePage = (event, newPage) => {
@@ -268,7 +336,7 @@ const ProductTable = () => {
                 </Typography>
               </Typography>
             </Grid>
-            <Grid item sx={{ display: 'flex', gap: 2 }}>
+            <Grid item sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
               <Button
                 variant="contained"
                 color="primary"
@@ -281,14 +349,40 @@ const ProductTable = () => {
               >
                 Add New Product
               </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                sx={styles.actionButton}
-                onClick={handleExport}
-              >
-                Export CSV
-              </Button>
+
+              {/* Hidden file input for import */}
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json"
+                hidden
+                onChange={handleImportFileChange}
+              />
+
+              <Tooltip title="Export all products as JSON (includes images)">
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<FileDownloadIcon fontSize="small" />}
+                  sx={styles.actionButton}
+                  onClick={handleExport}
+                >
+                  Export JSON
+                </Button>
+              </Tooltip>
+
+              <Tooltip title="Import products from a previously exported JSON file">
+                <Button
+                  variant="outlined"
+                  color="success"
+                  startIcon={<FileUploadIcon fontSize="small" />}
+                  sx={styles.actionButton}
+                  onClick={() => importInputRef.current?.click()}
+                  disabled={isLoading}
+                >
+                  Import JSON
+                </Button>
+              </Tooltip>
             </Grid>
           </Grid>
         </Paper>
@@ -300,6 +394,19 @@ const ProductTable = () => {
             namesList={[]}
           />
         </Paper>
+
+        {/* Import progress bar */}
+        {importProgress && (
+          <Paper elevation={0} sx={{ p: 2, mb: 2, borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Importing products… {importProgress.done} / {importProgress.total}
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={(importProgress.done / importProgress.total) * 100}
+            />
+          </Paper>
+        )}
 
         <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e0e0e0', overflow: 'hidden' }}>
           <TableContainer sx={{ maxHeight: 600 }}>

@@ -34,7 +34,9 @@ const LoginPage = () => {
   useEffect(() => {
     const auth = localStorage.getItem("user");
     if (auth) {
-      navigate("/product");
+      const parsed = JSON.parse(auth);
+      const role = parsed?.data?.role;
+      navigate(role === "Admin" ? "/user-management" : "/product");
     }
   }, [navigate]);
 
@@ -51,7 +53,8 @@ const LoginPage = () => {
         dispatch(setUser(result));
         localStorage.setItem("user", JSON.stringify(result));
         setRespMsg("Login successful!");
-        setTimeout(() => navigate("/product"), 1000);
+        const isAdmin = result?.data?.role === "Admin";
+        setTimeout(() => navigate(isAdmin ? "/user-management" : "/product"), 1000);
       }
     } catch (err) {
       setRespMsg(err?.data?.msg || "Login failed. Please try again.");

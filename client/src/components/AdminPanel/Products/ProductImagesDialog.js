@@ -43,13 +43,14 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      // maxWidth="lg"
-      fullWidth={false}
+      maxWidth="md"
+      fullWidth
       PaperProps={{
         sx: {
           borderRadius: 3,
           overflow: "hidden",
           boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
+          minWidth: { xs: '90vw', sm: 680 },
         },
       }}
     >
@@ -87,7 +88,7 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
           position: "relative",
           bgcolor: "#f9fafb",
           p: 0,
-          minHeight: 450,
+          minHeight: 500,
           overflow: 'hidden'
         }}
       >
@@ -130,7 +131,8 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
             alt={`Product image ${currentIndex + 1}`}
             sx={{
               maxWidth: "100%",
-              maxHeight: 700,
+              maxHeight: 400,
+              width: '80%',
               objectFit: 'contain',
               transition: "transform 0.3s",
               "&:hover": { transform: "scale(1.02)" },
@@ -158,8 +160,8 @@ const ProductImagesDialog = ({ open, images = [], onClose }) => {
             alt={`Thumbnail ${index + 1}`}
             onClick={() => setCurrentIndex(index)}
             sx={{
-              width: 80,
-              height: 80,
+              width: 110,
+              height: 110,
               objectFit: "cover",
               borderRadius: 1,
               cursor: "pointer",

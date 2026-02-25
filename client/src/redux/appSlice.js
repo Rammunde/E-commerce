@@ -18,10 +18,11 @@ const appSlice = createSlice({
     logout: (state) => {
       state.user = {};
       state.totalItems = 0;
-      // Also clear localStorage
+      // Clear all persisted auth data
       localStorage.removeItem("user");
       localStorage.removeItem("userId");
-      localStorage.removeItem("appState");
+      localStorage.removeItem("appState");  // legacy cleanup
+      sessionStorage.removeItem("appState");
     }
   },
 });
