@@ -40,6 +40,7 @@ const Nav = () => {
     <div
       style={{
         background: "#626467", // Navbar color
+        background: "#626467", // Navbar color
         paddingTop: "5px",
         paddingBottom: "10px",
         position: "sticky",
