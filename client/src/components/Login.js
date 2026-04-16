@@ -1,60 +1,26 @@
-import React, { useState } from "react";
-import { styled } from "@mui/material/styles";
+import React, { useState, useEffect } from "react";
 import {
+  Container,
+  Paper,
+  Grid,
   TextField,
   Button,
-  Paper,
-  Container,
-  Grid,
   IconButton,
   InputAdornment,
   Typography,
   Alert,
+  CircularProgress,
+  Box,
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
-import { getTotalAddedItems } from "../commonApi";
+import { useLoginUserMutation } from "../redux/apiSlice";
 import { useDispatch } from "react-redux";
-import { setTotalItems } from "../redux/appSlice";
-
-// Define styles using MUI v5 styled API
-const useStyles = styled({
-  loginContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginTop: 64, // Adjust the margin top as needed
-  },
-  paper: {
-    padding: "32px 24px", // Add padding to all sides
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    borderRadius: 8,
-    width: "100%",
-    marginTop: 64, // Adjust the margin top as needed
-  },
-  form: {
-    width: "100%", // Fix IE 11 issue
-    // padding: "0 16px", // Add padding to left and right
-    // paddingTop:"30px",
-    marginBottom: 16, // Add margin at the bottom
-  },
-  formElement: {
-    marginBottom: 16,
-  },
-  appButton: {
-    margin: "16px",
-  },
-  linkContainer: {
-    marginTop: 20,
-    textAlign: "center",
-  },
-});
+import { setUser } from "../redux/appSlice";
+import { PORTAL_NAME } from "../config";
 
 const LoginPage = () => {
-  const classes = useStyles();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -62,188 +28,173 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [respMsg, setRespMsg] = useState("");
-  const [checkValidate, setCheckValidate] = useState(false);
-  const [error, setError] = useState(false);
+  const [loginUser, { isLoading }] = useLoginUserMutation();
 
-  const navigateToSignUp = () => {
-    navigate("/signup");
-  };
+  // Redirect if already logged in
+  useEffect(() => {
+    const auth = localStorage.getItem("user");
+    if (auth) {
+      const parsed = JSON.parse(auth);
+      const role = parsed?.data?.role;
+      navigate(role === "Admin" ? "/user-management" : "/product");
+    }
+  }, [navigate]);
 
-  const loginUser = () => {
-    setCheckValidate(true);
-    if (username?.trim() && password) {
-      fetch("http://localhost:5000/users/loginUser", {
-        method: "post",
-        headers: { "content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      })
-        .then((resp) => resp.json())
-        .then((data) => {
-          setRespMsg(data?.msg);
-          setError(data.err);
-          if (data.err === false) {
-            localStorage.setItem("user", JSON.stringify(data));
-            localStorage.setItem("userId", data?.data?._id);
-            fetchData(data?.data?._id);
-            if (data?.data?.role === "Admin") {
-              navigate("/user-management");
-            } else {
-              navigate("/");
-            }
-          } else {
-            localStorage.clear();
-          }
-        });
-      setCheckValidate(false);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setRespMsg("Please enter both username and password");
+      return;
+    }
+
+    try {
+      const result = await loginUser({ username, password }).unwrap();
+      if (result) {
+        dispatch(setUser(result));
+        localStorage.setItem("user", JSON.stringify(result));
+        setRespMsg("Login successful!");
+        const isAdmin = result?.data?.role === "Admin";
+        setTimeout(() => navigate(isAdmin ? "/user-management" : "/product"), 1000);
+      }
+    } catch (err) {
+      setRespMsg(err?.data?.msg || "Login failed. Please try again.");
     }
   };
 
-  const fetchData = async (userId) => {
-    const total = await getTotalAddedItems(userId); // Pass userId
-    console.log("res", total);
-    dispatch(setTotalItems(total)); // Update Redux state
-  };
-
-  const handleCloseReportUserManagement = () => {
+  const clearForm = () => {
+    setUsername("");
+    setPassword("");
     setRespMsg("");
   };
 
   return (
-    <Container
-      component="main"
-      maxWidth="xs"
+    <Box
       sx={{
+        minHeight: "100vh",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
-        marginTop: 8,
+        justifyContent: "center",
+        backgroundColor: "#f1f3f6",
+        py: 4,
       }}
     >
-      <Paper
-        elevation={3}
-        sx={{
-          padding: "32px 24px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          borderRadius: 2,
-          width: "100%",
-          marginTop: 8,
-        }}
-      >
-        <Grid container spacing={2}>
+      <Container maxWidth="xs">
+        <Paper
+          elevation={1}
+          sx={{
+            padding: "40px 32px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            borderRadius: "4px",
+            backgroundColor: "#fff",
+          }}
+        >
+          <Box sx={{ width: "100%", textAlign: "left", mb: 4 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: "#212121", mb: 1 }}>
+              Login
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#878787" }}>
+              Get access to your Orders, Wishlist and Recommendations
+            </Typography>
+          </Box>
+
           {respMsg && (
-            <Grid item xs={12}>
-              {respMsg && !error && (
-                <Alert
-                  onClose={handleCloseReportUserManagement}
-                  severity="success"
-                  sx={{ marginBottom: 2 }}
-                >
-                  {respMsg}
-                </Alert>
-              )}
-              {respMsg && error && (
-                <Alert
-                  onClose={handleCloseReportUserManagement}
-                  severity="error"
-                  sx={{ marginBottom: 2 }}
-                >
-                  {respMsg}
-                </Alert>
-              )}
-            </Grid>
+            <Alert
+              severity={respMsg.toLowerCase().includes("failed") ? "error" : "success"}
+              sx={{ width: "100%", mb: 3 }}
+            >
+              {respMsg}
+            </Alert>
           )}
-          <Grid item xs={12}>
-            <Typography variant="h5">Login</Typography>
-            <form className={classes.form}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} className={classes.formElement}>
-                  <TextField
-                    fullWidth
-                    label="Username"
-                    variant="outlined"
-                    error={
-                      checkValidate
-                        ? username?.trim()?.length > 0
-                          ? false
-                          : true
-                        : false
-                    }
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    autoComplete="off"
-                    name="username"
-                  />
-                </Grid>
-                <Grid item xs={12} className={classes.formElement}>
-                  <TextField
-                    fullWidth
-                    label="Password"
-                    variant="outlined"
-                    error={
-                      checkValidate
-                        ? password?.length > 0
-                          ? false
-                          : true
-                        : false
-                    }
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowPassword(!showPassword)}
-                            edge="end"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                    autoComplete="off"
-                    name="password"
-                  />
-                </Grid>
+
+          <form style={{ width: "100%" }} onSubmit={handleLogin}>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Enter Username"
+                  variant="standard"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  sx={{
+                    "& .MuiInput-underline:after": { borderBottomColor: "#2874f0" },
+                    "& .MuiInputLabel-root.Mui-focused": { color: "#2874f0" },
+                  }}
+                />
               </Grid>
-              <Grid container spacing={2} style={{ paddingTop: "20px" }}>
-                <Grid item xs={6}>
-                  <Button
-                    fullWidth
-                    className={classes.appButton}
-                    variant="outlined"
-                    color="primary"
-                    onClick={() => {
-                      setCheckValidate(false);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </Grid>
-                <Grid item xs={6}>
-                  <Button
-                    fullWidth
-                    className={classes.appButton}
-                    variant="contained"
-                    color="primary"
-                    onClick={loginUser}
-                  >
-                    Log In
-                  </Button>
-                </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Enter Password"
+                  variant="standard"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  sx={{
+                    "& .MuiInput-underline:after": { borderBottomColor: "#2874f0" },
+                    "& .MuiInputLabel-root.Mui-focused": { color: "#2874f0" },
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
               </Grid>
-            </form>
-          </Grid>
-        </Grid>
-        <div className={classes.linkContainer} style={{ paddingTop: "20px" }}>
-          <Typography variant="body2">
-            Don't have an account? <Link to="/signup">Sign up</Link>
-          </Typography>
-        </div>
-      </Paper>
-    </Container>
+              <Grid item xs={12}>
+                <Typography variant="body2" sx={{ color: "#878787", fontSize: "12px", mb: 2 }}>
+                  By continuing, you agree to {PORTAL_NAME}'s Terms of Use and Privacy Policy.
+                </Typography>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  type="submit"
+                  disabled={isLoading}
+                  sx={{
+                    py: 1.5,
+                    backgroundColor: "#fb641b",
+                    color: "#fff",
+                    fontWeight: 600,
+                    borderRadius: "2px",
+                    boxShadow: "0 1px 2px 0 rgba(0,0,0,.2)",
+                    "&:hover": {
+                      backgroundColor: "#f4511e",
+                    },
+                  }}
+                >
+                  {isLoading ? <CircularProgress size={24} color="inherit" /> : "Login"}
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+
+          <Box sx={{ mt: 4, width: "100%", textAlign: "center" }}>
+            <Link
+              to="/signup"
+              style={{
+                color: "#2874f0",
+                textDecoration: "none",
+                fontWeight: 600,
+                fontSize: "14px",
+              }}
+            >
+              New to {PORTAL_NAME}? Create an account
+            </Link>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 

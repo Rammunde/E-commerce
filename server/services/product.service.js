@@ -4,9 +4,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { ObjectId } = require("mongodb");
-const {PRODUCTS, USERS_DB} = require('../common/collectionNames');
+const { PRODUCTS, USERS_DB } = require('../common/collectionNames');
+const { sendOrderConfirmation } = require('./email.service');
 module.exports = {
   addProduct,
+  updateProduct,
   getProductList,
   deleteProduct,
   editProduct,
@@ -16,7 +18,8 @@ module.exports = {
   IncreaseDecreaseItems,
   getAllProductList,
   updatePriceTypeScript,
-  deleteProduct
+  deleteProduct,
+  placeOrder,
 };
 
 const storage = multer.memoryStorage({
@@ -87,12 +90,115 @@ async function addProduct(req, res) {
   }
 }
 
+async function updateProduct(req, res) {
+  const uploadMiddleware = upload.array("productImages");
+
+  try {
+    // run multer
+    await new Promise((resolve, reject) => {
+      uploadMiddleware(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    const { id } = req.params;
+    const {
+      name,
+      price,
+      company,
+      productDescription,
+      keepImageIndexes,
+    } = req.body;
+
+    const files = req.files || [];
+
+    const collection = await db.connectProductsDb();
+
+    // get existing product
+    const product = await collection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!product) {
+      return res
+        .status(404)
+        .json({ err: true, msg: "Product not found" });
+    }
+
+    // ✅ filter existing images
+    let finalImages = [];
+    if (keepImageIndexes) {
+      const indexes = JSON.parse(keepImageIndexes);
+      finalImages = (product.productImages || []).filter(
+        (_, index) => indexes.includes(index)
+      );
+    }
+
+    // ✅ convert new images
+    const newImages = files.map((file) =>
+      `data:${file.mimetype};base64,${file.buffer.toString("base64")}`
+    );
+
+    finalImages = [...finalImages, ...newImages];
+
+    // build update doc
+    const updateDoc = {
+      ...(name && { name }),
+      ...(price && { price: Number(price) }),
+      ...(company && { company }),
+      ...(productDescription && { productDescription }),
+      ...(finalImages.length && { productImages: finalImages }),
+      updatedAt: new Date(),
+    };
+
+    await collection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateDoc }
+    );
+
+    res.json({
+      err: false,
+      msg: "Product updated successfully",
+    });
+  } catch (error) {
+    console.error("Update Product Error:", error);
+    res.status(500).json({
+      err: true,
+      msg: "Failed to update product",
+    });
+  }
+}
+
+
+
 async function getProductList(req, res) {
-  const collection = await db.connectProductsDb();
-  const productList = await collection.find({}).toArray();
-  if (productList) {
-    res.status(200).json({ allProducts: productList });
-  } else {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 8;
+    const search = req.query.search || "";
+    const skip = (page - 1) * limit;
+
+    const collection = await db.connectProductsDb();
+
+    const query = search
+      ? { name: { $regex: search, $options: "i" } }
+      : {};
+
+    const totalCount = await collection.countDocuments(query);
+    const productList = await collection.find(query)
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.status(200).json({
+      allProducts: productList,
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit)
+    });
+  } catch (error) {
+    console.error("Error in getProductList:", error);
     res.status(500).json({ err: true, msg: "Internal server error" });
   }
 }
@@ -411,16 +517,16 @@ async function deleteProduct(req, res) {
   console.log("productId", productId);
 
   try {
-        const conn = await db.connectEcomerceDB();
+    const conn = await db.connectEcomerceDB();
     const active_cart_collection = conn.collection(config.ACTIVE_CART);
-   const collection = await db.connectProductsDb();
+    const collection = await db.connectProductsDb();
     // const result = await collection.deleteOne({ _id: userId});
     const isExist = await collection.findOne({ _id: new ObjectId(productId) });
     if (isExist) {
       await collection.deleteOne({
         _id: new ObjectId(productId),
       });
-       await active_cart_collection.deleteOne({
+      await active_cart_collection.deleteOne({
         product_id: productId,
       });
       res.status(200).json({ err: false, msg: "Product deleted successfully" });
@@ -430,5 +536,92 @@ async function deleteProduct(req, res) {
   } catch (error) {
     console.error("Error while deleting product:", error);
     res.status(500).json({ err: true, msg: "Internal Server Error" });
+  }
+}
+
+// Place Order with Email Confirmation
+async function placeOrder(req, res) {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ err: true, msg: "User ID is required" });
+    }
+
+    // Get cart items
+    const conn = await db.connectEcomerceDB();
+    const cartCollection = conn.collection(config.ACTIVE_CART);
+    const cartItems = await cartCollection.find({ userId }).toArray();
+
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({ err: true, msg: "Your cart is empty" });
+    }
+
+    // Get user details
+    const usersCollection = conn.collection(config.USERS_DB || "users");
+    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user || !user.email) {
+      return res.status(400).json({ err: true, msg: "User not found or email not available" });
+    }
+
+    // Calculate price details
+    const PLATFORM_FEE = 3;
+    const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const originalTotal = cartItems.reduce(
+      (sum, item) => sum + (parseFloat(item.price) || 0),
+      0
+    );
+    const discountTotal = cartItems.reduce((sum, item) => {
+      const price = parseFloat(item.originalPrice) || parseFloat(item.price) || 0;
+      return sum + (price * 0.1 * (item.quantity || 1)); // 10% discount
+    }, 0);
+    const finalTotal = originalTotal - discountTotal + PLATFORM_FEE;
+
+    // Generate order ID
+    const orderId = `ORD${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+
+    // Prepare order items with calculated prices
+    const orderItems = cartItems.map((item) => {
+      const price = parseFloat(item.price) || 0;
+      const discount = price * 0.1;
+      return {
+        ...item,
+        discount: discount.toFixed(2),
+        finalPrice: (price - discount).toFixed(2),
+      };
+    });
+
+    // Prepare order details for email
+    const orderDetails = {
+      orderId,
+      userName: user.fullName || user.firstName || "Customer",
+      orderItems,
+      priceDetails: {
+        totalItems,
+        originalTotal: originalTotal.toFixed(2),
+        discountTotal: discountTotal.toFixed(2),
+        platformFee: PLATFORM_FEE,
+        finalTotal: finalTotal.toFixed(2),
+      },
+    };
+
+    // Send email
+    await sendOrderConfirmation(user.email, orderDetails);
+
+    // Clear cart after successful order
+    await cartCollection.deleteMany({ userId });
+
+    res.status(200).json({
+      err: false,
+      msg: "Order placed successfully! Confirmation email sent.",
+      orderId,
+    });
+  } catch (error) {
+    console.error("Error in placeOrder:", error);
+    res.status(500).json({
+      err: true,
+      msg: "Failed to place order. Please try again.",
+    });
   }
 }

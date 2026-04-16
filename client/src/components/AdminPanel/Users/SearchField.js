@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React from "react";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 
-const SearchField = ({ label = "Search ...", setSearchString, namesList }) => {
+const SearchField = ({ label = "Search ...", setSearchString, namesList = [] }) => {
   return (
     <Autocomplete
-      onChange={(event, newValue) => setSearchString(newValue)}
+      onChange={(event, newValue) => setSearchString(newValue || "")}
       filterOptions={(options, params) =>
         options.filter((name) =>
-          name.toLowerCase().includes(params.inputValue.toLowerCase())
+          name?.toLowerCase().includes(params.inputValue.toLowerCase())
         )
       }
       options={namesList}

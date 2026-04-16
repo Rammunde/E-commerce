@@ -6,6 +6,9 @@ import reportWebVitals from './reportWebVitals';
 import { Provider } from 'react-redux';
 import store from './redux/store';
 
+import { ThemeProvider } from '@mui/material/styles';
+import theme from './theme';
+
 window.addEventListener('error', function (event) {
   const isChunkLoadError =
     event.message &&
@@ -19,18 +22,20 @@ window.addEventListener('error', function (event) {
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-// In React 18, StrictMode causes some lifecycle methods and effects to run twice on purpose (in development only) to help detect issues.
-// This can confuse developers or cause issues like:
-// API calls running twice
-// useEffect executing twice
-// console.logs duplicating output
+  // In React 18, StrictMode causes some lifecycle methods and effects to run twice on purpose (in development only) to help detect issues.
+  // This can confuse developers or cause issues like:
+  // API calls running twice
+  // useEffect executing twice
+  // console.logs duplicating output
 
-// ⚠️ Important: This only happens in development, not in production.
+  // ⚠️ Important: This only happens in development, not in production.
   // For long-term quality, it’s good practice to use StrictMode — it catches unsafe lifecycles, deprecated APIs, and more.
-  // <React.StrictMode>
-  <Provider store={store}>
-    <App />
+  <React.StrictMode>
+    <Provider store={store}>
+      <ThemeProvider theme={theme}>
+        <App />
+      </ThemeProvider>
     </Provider>
-  // </React.StrictMode>
+  </React.StrictMode>
 );
 reportWebVitals();

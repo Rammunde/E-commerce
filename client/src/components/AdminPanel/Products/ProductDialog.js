@@ -10,37 +10,49 @@ import {
   Alert,
   IconButton,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import { AttachFile, Clear } from "@mui/icons-material";
 
+// API Configuration
+const API_BASE_URL = "http://localhost:5000";
+
 const ProductDialog = ({ open, onClose, mode = "add", product }) => {
+  /* ================= STATES ================= */
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
-  const [productCampany, setProductCampany] = useState("");
+  const [productCompany, setProductCompany] = useState("");
   const [productDescription, setProductDescription] = useState("");
   const [productImages, setProductImages] = useState([]);
   const [fileNames, setFileNames] = useState("");
+  const [keepImageIndexes, setKeepImageIndexes] = useState([]);
 
   const [respMsg, setRespMsg] = useState("");
   const [error, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  console.log("product", product)
+  const isEditMode = mode === "edit";
+
   /* ================= PREFILL FOR EDIT ================= */
   useEffect(() => {
-    if (mode === "edit" && product) {
+    if (isEditMode && product) {
       setProductName(product.name || "");
-      setProductCampany(product.company || "");
+      setProductCompany(product.company || "");
       setProductDescription(product.productDescription || "");
       setProductPrice(product.price || "");
-      setFileNames(
-        product.productImages?.map((img) => img.originalname).join(", ") || ""
-      );
+
+      // Keep all existing images by default
+      if (product.productImages?.length) {
+        setKeepImageIndexes(product.productImages.map((_, index) => index));
+      }
+
+      setFileNames("");
     }
 
     if (mode === "add") {
       clearForm();
     }
-  }, [mode, product]);
+  }, [mode, product, isEditMode]);
 
   /* ================= HANDLERS ================= */
   const handleImageChange = (e) => {
@@ -62,17 +74,23 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
     document.getElementById("file-input").click();
   };
 
-  const handleCloseResponeMsg = () => {
+  const handleCloseResponseMsg = () => {
     setRespMsg("");
   };
 
   const clearForm = () => {
     setProductName("");
-    setProductCampany("");
+    setProductCompany("");
     setProductDescription("");
     setProductPrice("");
     setProductImages([]);
     setFileNames("");
+    setKeepImageIndexes([]);
+    setRespMsg("");
+  };
+
+  const isFormValid = () => {
+    return productName && productCompany && productDescription && productPrice;
   };
 
   /* ================= ADD PRODUCT API ================= */
@@ -84,7 +102,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
     formData.append("name", productName);
     formData.append("price", Number(productPrice));
     formData.append("originalPrice", Number(productPrice));
-    formData.append("company", productCampany);
+    formData.append("company", productCompany);
     formData.append("userId", userId);
     formData.append("productDescription", productDescription);
 
@@ -92,30 +110,33 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
       formData.append("productImages", file)
     );
 
-    const resp = await fetch("http://localhost:5000/products/addProduct", {
+    const resp = await fetch(`${API_BASE_URL}/products/addProduct`, {
       method: "POST",
       body: formData,
     });
 
     const data = await resp.json();
-    setRespMsg(data.msg);
-    setIsError(data.err);
+    return data;
   };
 
   /* ================= EDIT PRODUCT API ================= */
   const updateProduct = async () => {
     const formData = new FormData();
+
     formData.append("name", productName);
     formData.append("price", Number(productPrice));
-    formData.append("company", productCampany);
+    formData.append("company", productCompany);
     formData.append("productDescription", productDescription);
+    formData.append("keepImageIndexes", JSON.stringify(keepImageIndexes));
 
-    Array.from(productImages).forEach((file) =>
-      formData.append("productImages", file)
-    );
+    if (productImages?.length) {
+      Array.from(productImages).forEach((file) =>
+        formData.append("productImages", file)
+      );
+    }
 
     const resp = await fetch(
-      `http://localhost:5000/products/updateProduct/${product._id}`,
+      `${API_BASE_URL}/products/updateProduct/${product._id}`,
       {
         method: "PUT",
         body: formData,
@@ -123,16 +144,29 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
     );
 
     const data = await resp.json();
-    setRespMsg(data.msg);
-    setIsError(data.err);
+    return data;
   };
 
   /* ================= SUBMIT ================= */
-  const handleSubmit = () => {
-    if (mode === "edit") {
-      updateProduct();
-    } else {
-      addProduct();
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    setRespMsg("");
+
+    try {
+      const data = isEditMode ? await updateProduct() : await addProduct();
+      setRespMsg(data.msg);
+      setIsError(data.err);
+
+      if (!data.err) {
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      }
+    } catch (err) {
+      setRespMsg("An error occurred. Please try again.");
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -149,16 +183,17 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
     >
       <DialogTitle sx={{ textAlign: "center" }}>
         <Typography variant="h6" color="primary">
-          {mode === "edit" ? "Edit Product" : "Add Product"}
+          {isEditMode ? "Edit Product" : "Add Product"}
         </Typography>
       </DialogTitle>
 
       <DialogContent>
         <Grid container spacing={2}>
+          {/* RESPONSE MSG */}
           <Grid item xs={12}>
             {respMsg && (
               <Alert
-                onClose={handleCloseResponeMsg}
+                onClose={handleCloseResponseMsg}
                 severity={error ? "error" : "success"}
                 sx={{ mb: 2 }}
               >
@@ -167,6 +202,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
             )}
           </Grid>
 
+          {/* FORM FIELDS */}
           <Grid item xs={12}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -182,8 +218,8 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
                 <TextField
                   fullWidth
                   label="Company"
-                  value={productCampany}
-                  onChange={(e) => setProductCampany(e.target.value)}
+                  value={productCompany}
+                  onChange={(e) => setProductCompany(e.target.value)}
                 />
               </Grid>
 
@@ -193,6 +229,8 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
                   label="Description"
                   value={productDescription}
                   onChange={(e) => setProductDescription(e.target.value)}
+                  multiline
+                  rows={2}
                 />
               </Grid>
 
@@ -200,20 +238,22 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
                 <TextField
                   fullWidth
                   label="Price"
+                  type="number"
                   value={productPrice}
                   onChange={(e) => setProductPrice(e.target.value)}
                 />
               </Grid>
 
+              {/* FILE INPUT */}
               <Grid item xs={12}>
                 <input
                   type="file"
                   id="file-input"
                   multiple
+                  accept="image/*"
                   hidden
                   onChange={handleImageChange}
                 />
-
                 <TextField
                   fullWidth
                   disabled
@@ -235,6 +275,46 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
                   }}
                 />
               </Grid>
+
+              {/* EXISTING IMAGES */}
+              {isEditMode && product?.productImages?.length > 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Existing Images (click to remove)
+                  </Typography>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {product.productImages.map((img, index) =>
+                      keepImageIndexes.includes(index) ? (
+                        <img
+                          key={index}
+                          src={img}
+                          alt="product"
+                          width={60}
+                          height={60}
+                          style={{
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            border: "2px solid #1976d2",
+                            objectFit: "cover",
+                          }}
+                          onClick={() =>
+                            setKeepImageIndexes((prev) =>
+                              prev.filter((i) => i !== index)
+                            )
+                          }
+                          title="Click to remove"
+                        />
+                      ) : null
+                    )}
+                  </div>
+                </Grid>
+              )}
             </Grid>
           </Grid>
         </Grid>
@@ -245,10 +325,10 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
           display: "flex",
           justifyContent: "center",
           gap: "1rem",
-          padding: ' 0 1.5rem 1rem' // top | left-right | bottom 
+          padding: "0 1.5rem 1rem",
         }}
       >
-        <Button onClick={onClose} variant="outlined" fullWidth>
+        <Button onClick={onClose} variant="outlined" fullWidth disabled={isLoading}>
           Cancel
         </Button>
 
@@ -256,14 +336,15 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
           variant="contained"
           fullWidth
           onClick={handleSubmit}
-          disabled={
-            !productName ||
-            !productCampany ||
-            !productDescription ||
-            !productPrice
-          }
+          disabled={!isFormValid() || isLoading}
         >
-          {mode === "edit" ? "Update Product" : "Add Product"}
+          {isLoading ? (
+            <CircularProgress size={24} />
+          ) : isEditMode ? (
+            "Update Product"
+          ) : (
+            "Add Product"
+          )}
         </Button>
       </DialogActions>
     </Dialog>
