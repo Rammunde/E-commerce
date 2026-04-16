@@ -1,7 +1,6 @@
 import React, {
   useState,
   useEffect,
-  useMemo,
   useCallback,
   lazy,
   Suspense,
@@ -12,9 +11,12 @@ import {
   Alert,
   Backdrop,
   CircularProgress,
+  Typography,
+  Box,
+  Button,
 } from "@mui/material";
 import { useDispatch } from "react-redux";
-import { updateGlobalItemCount } from "../commonApi";
+import { useGetProductsQuery, useAddToCartMutation } from "../redux/apiSlice";
 import CustomizedInputBase from "../components/ProductUtils/CustomizedInputBase";
 
 const ProductCard = lazy(() =>
@@ -28,29 +30,50 @@ const ProductPage = () => {
   const [open, setOpen] = useState(false);
   const [severity, setSeverity] = useState("success");
   const [searchProduct, setSearchProduct] = useState("");
-  const [allProductList, setAllProductList] = useState([]);
   const [selectedMainImages, setSelectedMainImages] = useState({});
   const [thumbnailIndex, setThumbnailIndex] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [allProducts, setAllProducts] = useState([]);
+  const ITEMS_PER_PAGE = 8;
 
-  /* ---------------- FETCH PRODUCTS ---------------- */
+  /* ---------------- SEARCH DEBOUNCE ---------------- */
   useEffect(() => {
-    setIsLoading(true);
-    fetch("http://localhost:5000/products/getProductList")
-      .then((resp) => resp.json())
-      .then((data) => {
-        setAllProductList(data?.allProducts || []);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchProduct);
+    }, 500);
 
-  /* ---------------- FILTER PRODUCTS ---------------- */
-  const filteredProducts = useMemo(() => {
-    return allProductList.filter((prod) =>
-      prod.name.toLowerCase().includes(searchProduct.toLowerCase())
-    );
-  }, [allProductList, searchProduct]);
+    return () => clearTimeout(handler);
+  }, [searchProduct]);
+
+  /* ---------------- RTK QUERY ---------------- */
+  const { data, isLoading, isFetching, error } = useGetProductsQuery({
+    page,
+    limit: ITEMS_PER_PAGE,
+    search: debouncedSearch,
+  });
+
+  const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
+
+  useEffect(() => {
+    if (data?.allProducts) {
+      if (page === 1) {
+        setAllProducts(data.allProducts);
+      } else {
+        setAllProducts((prev) => [...prev, ...data.allProducts]);
+      }
+    }
+  }, [data, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const loadMoreProducts = () => {
+    if (data && page < data.totalPages) {
+      setPage((prev) => prev + 1);
+    }
+  };
 
   /* ---------------- HANDLERS ---------------- */
   const handleClose = useCallback(() => setOpen(false), []);
@@ -72,15 +95,12 @@ const ProductPage = () => {
   const handleNext = useCallback((productId, imagesLength) => {
     setThumbnailIndex((prev) => ({
       ...prev,
-      [productId]: Math.min(
-        (prev[productId] || 0) + 1,
-        imagesLength - 3
-      ),
+      [productId]: Math.min((prev[productId] || 0) + 1, imagesLength - 3),
     }));
   }, []);
 
   const handleAddToCart = useCallback(
-    (
+    async (
       productId,
       productName,
       productPrice,
@@ -134,8 +154,7 @@ const ProductPage = () => {
           setIsError(true);
           console.error("Error:", err)
         });
-    };
-
+    })
 
   const closeAlert = () => {
     setRespMsg("");
@@ -154,7 +173,7 @@ const ProductPage = () => {
   }, [respMsg]);
 
   if (!product) {
-    return (
+    return (<>
       <Grid container spacing={3} padding={3}>
         <Grid item xs={2}></Grid>
         <Grid item xs={8}>
@@ -235,7 +254,7 @@ const ProductPage = () => {
 
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={isLoading}
+        open={isLoading || isAddingToCart}
       >
         <CircularProgress color="inherit" />
       </Backdrop>
@@ -246,7 +265,7 @@ const ProductPage = () => {
         onClose={handleClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert onClose={handleClose} severity={severity} sx={{ width: "100%" }}>
+        <Alert onClose={handleClose} severity={severity} sx={{ width: "100%", borderRadius: '8px', boxShadow: 3 }}>
           {respMsg}
         </Alert>
       </Snackbar>
@@ -266,9 +285,7 @@ const ProductPage = () => {
             />
           ))}
         </Suspense>
-      </Grid>
-    </Grid >
-  );
-};
-
+      </Grid></>)
+  };
+}
 export default ProductPage;
