@@ -16,6 +16,7 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import { updateGlobalItemCount } from "../../commonApi";
 import { useDispatch } from "react-redux";
+import ProductImagesDialog from "../AdminPanel/Products/ProductImagesDialog";
 
 // API Configuration
 const API_BASE_URL = "http://localhost:5000";
@@ -28,6 +29,13 @@ const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+  const [openImageDialog, setOpenImageDialog] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
+
+  const handleOpenImages = (images) => {
+    setSelectedImages(images);
+    setOpenImageDialog(true);
+  };
 
   // Get user ID from localStorage
   const getUserId = useCallback(() => {
@@ -210,6 +218,11 @@ const Cart = () => {
 
   return (
     <Box p={4}>
+      <ProductImagesDialog
+        open={openImageDialog}
+        images={selectedImages}
+        onClose={() => setOpenImageDialog(false)}
+      />
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
@@ -253,15 +266,47 @@ const Cart = () => {
                 <Grid container spacing={2} alignItems="center">
                   {/* Product Image */}
                   <Grid item xs={3}>
-                    <img
-                      src={item?.productImages?.[0] || "/placeholder.png"}
-                      alt={item.name}
-                      style={{
-                        width: "100%",
-                        borderRadius: "8px",
-                        objectFit: "cover",
-                      }}
-                    />
+                    <Box display="flex" gap={1}>
+                      {item?.productImages?.slice(0, 2).map((img, index) => (
+                        <Box key={index} position="relative">
+                          <img
+                            src={img}
+                            alt={`${item.name}-${index}`}
+                            onClick={() => handleOpenImages(item.productImages)}
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              borderRadius: "8px",
+                              objectFit: "cover",
+                              cursor: "pointer",
+                            }}
+                          />
+
+                          {index === 1 && item.productImages.length > 2 && (
+                            <Box
+                              onClick={() => handleOpenImages(item.productImages)}
+                              sx={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "60px",
+                                height: "60px",
+                                borderRadius: "8px",
+                                background: "rgba(0,0,0,0.6)",
+                                color: "#fff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: "bold",
+                                cursor: "pointer",
+                              }}
+                            >
+                              +{item.productImages.length - 2}
+                            </Box>
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
                   </Grid>
 
                   {/* Product Details */}
