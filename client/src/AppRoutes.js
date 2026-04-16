@@ -8,8 +8,6 @@ import ContactUs from "./components/ContactUs/ContactUs";
 import UsersTable from "./components/AdminPanel/Users/UsersTable";
 import ProductTable from "./components/AdminPanel/Products/ProductTable";
 // import AdminPanel from "./components/AdminPanel";
-import UsersTable from "./components/AdminPanel/Users/UsersTable";
-import ProductTable from "./components/AdminPanel/Products/ProductTable";
 import SignUp from "./components/SignUp";
 import Login from './components/Login';
 
