@@ -16,7 +16,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
 import { useLoginUserMutation } from "../redux/apiSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../redux/appSlice";
 import { PORTAL_NAME } from "../config";
 
@@ -30,15 +30,15 @@ const LoginPage = () => {
   const [respMsg, setRespMsg] = useState("");
   const [loginUser, { isLoading }] = useLoginUserMutation();
 
+  const userFromStore = useSelector((state) => state.app.user);
+
   // Redirect if already logged in
   useEffect(() => {
-    const auth = sessionStorage.getItem("user");
-    if (auth) {
-      const parsed = JSON.parse(auth);
-      const role = parsed?.data?.role;
+    if (userFromStore && (userFromStore.data || userFromStore._id)) {
+      const role = userFromStore.data?.role || userFromStore.role;
       navigate(role === "Admin" ? "/user-management" : "/product");
     }
-  }, [navigate]);
+  }, [navigate, userFromStore]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -51,7 +51,6 @@ const LoginPage = () => {
       const result = await loginUser({ username, password }).unwrap();
       if (result) {
         dispatch(setUser(result));
-        sessionStorage.setItem("user", JSON.stringify(result));
         setRespMsg("Login successful!");
         const isAdmin = result?.data?.role === "Admin";
         setTimeout(() => navigate(isAdmin ? "/user-management" : "/product"), 1000);

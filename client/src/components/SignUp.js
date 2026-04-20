@@ -15,9 +15,11 @@ import {
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const SignUpPage = () => {
   const navigate = useNavigate();
+  const userFromStore = useSelector((state) => state.app.user);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -33,11 +35,10 @@ const SignUpPage = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    const auth = sessionStorage.getItem("user");
-    if (auth) {
+    if (userFromStore && (userFromStore.data || userFromStore._id)) {
       navigate("/product");
     }
-  }, [navigate]);
+  }, [navigate, userFromStore]);
 
   // Validation helpers
   const validateEmail = (email) => {

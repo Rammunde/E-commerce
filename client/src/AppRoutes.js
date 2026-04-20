@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import { useSelector } from "react-redux";
 import PrivateComponent from "./components/PrivateComponent";
 import HomePage from "./components/Home";
 import ProductPage from "./components/ProductPage";
@@ -12,7 +13,7 @@ import SignUp from "./components/SignUp";
 import Login from './components/Login';
 
 const AppRoutes = () => {
-  const user = JSON.parse(sessionStorage.getItem('user'));
+  const user = useSelector((state) => state.app.user);
   const isAdmin = user?.data?.role === 'Admin';
 
   console.log("isAdmin", isAdmin)
@@ -43,5 +44,6 @@ const AppRoutes = () => {
     </Routes>
   );
 };
+
 
 export default AppRoutes;

@@ -163,9 +163,8 @@ const Nav = () => {
     return (
         <div
             style={{
-                background: "#626467", // Navbar color
-                paddingTop: "5px",
-                paddingBottom: "10px",
+                background: "linear-gradient(90deg, #2874f0 0%, #1c54b2 100%)", // Premium Blue Gradient
+                boxShadow: "0 2px 4px 0 rgba(0,0,0,.2)",
                 position: "sticky",
                 top: 0,
                 zIndex: 1000,
@@ -176,6 +175,9 @@ const Nav = () => {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
+                    padding: "12px 24px",
+                    maxWidth: "1440px",
+                    margin: "0 auto",
                 }}
             >
                 <img
