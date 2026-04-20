@@ -21,7 +21,9 @@ const appSlice = createSlice({
       // Clear all persisted auth data
       localStorage.removeItem("user");
       localStorage.removeItem("userId");
-      localStorage.removeItem("appState");  // legacy cleanup
+      localStorage.removeItem("appState");
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("userId");
       sessionStorage.removeItem("appState");
     }
   },

@@ -1,6 +1,7 @@
 import React from "react";
 import "./App.css";
 import Nav from "./components/Nav";
+import IdleTimer from "./components/IdleTimer";
 import Footer from "./components/Footer";
 import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./AppRoutes"; // Import your routes here
@@ -10,6 +11,7 @@ function App() {
     <div style={appStyle}>
       <BrowserRouter>
         <Nav />
+        <IdleTimer />
         <div style={mainContentStyle}>
           <AppRoutes /> {/* Use the AppRoutes component here */}
         </div>

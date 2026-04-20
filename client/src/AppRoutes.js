@@ -12,7 +12,7 @@ import SignUp from "./components/SignUp";
 import Login from './components/Login';
 
 const AppRoutes = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
+  const user = JSON.parse(sessionStorage.getItem('user'));
   const isAdmin = user?.data?.role === 'Admin';
 
   console.log("isAdmin", isAdmin)

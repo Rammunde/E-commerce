@@ -33,7 +33,7 @@ const SignUpPage = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    const auth = localStorage.getItem("user");
+    const auth = sessionStorage.getItem("user");
     if (auth) {
       navigate("/product");
     }
