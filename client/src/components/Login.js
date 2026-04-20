@@ -32,7 +32,7 @@ const LoginPage = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    const auth = localStorage.getItem("user");
+    const auth = sessionStorage.getItem("user");
     if (auth) {
       const parsed = JSON.parse(auth);
       const role = parsed?.data?.role;
@@ -51,7 +51,7 @@ const LoginPage = () => {
       const result = await loginUser({ username, password }).unwrap();
       if (result) {
         dispatch(setUser(result));
-        localStorage.setItem("user", JSON.stringify(result));
+        sessionStorage.setItem("user", JSON.stringify(result));
         setRespMsg("Login successful!");
         const isAdmin = result?.data?.role === "Admin";
         setTimeout(() => navigate(isAdmin ? "/user-management" : "/product"), 1000);
