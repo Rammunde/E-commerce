@@ -14,9 +14,10 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import { updateGlobalItemCount } from "../../commonApi";
 import { useDispatch } from "react-redux";
+import { useRemoveFromCartMutation, useUpdateCartQuantityMutation } from "../../redux/apiSlice";
 import ProductImagesDialog from "../AdminPanel/Products/ProductImagesDialog";
+import { useSelector } from "react-redux";
 
 // API Configuration
 const API_BASE_URL = "http://localhost:5000";
@@ -31,6 +32,7 @@ const Cart = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
+  const user = useSelector((state) => state.app.user);
 
   const handleOpenImages = (images) => {
     setSelectedImages(images);
@@ -39,9 +41,9 @@ const Cart = () => {
 
   // Get user ID from localStorage
   const getUserId = useCallback(() => {
-    const user = localStorage.getItem("user");
-    return user ? JSON.parse(user)?.data?._id : null;
-  }, []);
+    const loggedInUser = user?.data || user;
+    return loggedInUser?._id;
+  }, [user]);
 
   // Calculate price details dynamically
   const priceDetails = useMemo(() => {
@@ -66,26 +68,23 @@ const Cart = () => {
     };
   }, [cartItems]);
 
+  const [removeFromCart] = useRemoveFromCartMutation();
+  const [updateCartQuantity] = useUpdateCartQuantityMutation();
+
   const handleRemove = async (item) => {
     try {
-      await fetch(`${API_BASE_URL}/products/removeAddedItems`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: item.product_id,
-          userId: item.userId,
-        }),
-      });
+      await removeFromCart({
+        product_id: item.product_id,
+        userId: item.userId,
+      }).unwrap();
+
       setSnackbar({
         open: true,
         message: "Item removed from cart",
         severity: "success",
       });
-      const userId = getUserId();
-      if (userId) {
-        updateGlobalItemCount(userId, dispatch);
-      }
-      getAddedItems();
+
+      await getAddedItems();
     } catch (error) {
       setSnackbar({
         open: true,
@@ -97,23 +96,16 @@ const Cart = () => {
 
   const handleQuantityChange = async (item, isIncrease) => {
     try {
-      await fetch(`${API_BASE_URL}/products/IncreaseDecreaseItems`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: item.product_id,
-          userId: item.userId,
-          price: item.price,
-          originalPrice: item.originalPrice,
-          plus: isIncrease,
-          minus: !isIncrease,
-        }),
-      });
-      const userId = getUserId();
-      if (userId) {
-        updateGlobalItemCount(userId, dispatch);
-      }
-      getAddedItems();
+      await updateCartQuantity({
+        product_id: item.product_id,
+        userId: item.userId,
+        price: item.price,
+        originalPrice: item.originalPrice,
+        plus: isIncrease,
+        minus: !isIncrease,
+      }).unwrap();
+
+      await getAddedItems();
     } catch (error) {
       setSnackbar({
         open: true,
@@ -150,7 +142,6 @@ const Cart = () => {
           severity: "success",
         });
         setCartItems([]);
-        updateGlobalItemCount(userId, dispatch);
       } else {
         throw new Error(data.msg || "Failed to place order");
       }
@@ -166,6 +157,7 @@ const Cart = () => {
   };
 
   const getAddedItems = useCallback(async () => {
+    console.log("Fetching added items...");
     const userId = getUserId();
     if (!userId) {
       setLoading(false);
@@ -206,11 +198,7 @@ const Cart = () => {
 
   useEffect(() => {
     getAddedItems();
-    const userId = getUserId();
-    if (userId) {
-      updateGlobalItemCount(userId, dispatch);
-    }
-  }, [getAddedItems, getUserId, dispatch]);
+  }, [getAddedItems]);
 
   const handleCloseSnackbar = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));

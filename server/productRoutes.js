@@ -21,7 +21,7 @@ router.post('/addProductToCart', productService.addProductToCart);
 router.get('/getAddedItems/:userId', productService.getAddedItems);
 router.post('/removeAddedItems', productService.removeAddedItems);
 router.post('/IncreaseDecreaseItems', productService.IncreaseDecreaseItems);
-router.post('/getAllProductList', productService.getAllProductList);
+router.query('/getAllProductList', productService.getAllProductList);
 router.delete('/deleteProduct/:id', productService.deleteProduct);
 router.post('/placeOrder', productService.placeOrder);
 

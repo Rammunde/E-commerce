@@ -39,6 +39,8 @@ import PeopleIcon from '@mui/icons-material/People';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCartShopping } from '@fortawesome/free-solid-svg-icons';
 
 const Nav = () => {
     const dispatch = useDispatch();

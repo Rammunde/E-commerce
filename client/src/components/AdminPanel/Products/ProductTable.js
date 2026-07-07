@@ -94,7 +94,7 @@ const ProductTable = () => {
     setIsLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/products/getAllProductList`, {
-        method: "POST",
+        method: "QUERY",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           searchString,
