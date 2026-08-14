@@ -134,7 +134,8 @@ const ProductPage = () => {
         formData.append("product_id", productId);
         formData.append("name", productName);
         formData.append("price", productPrice);
-        formData.append("originalPrice", originalPrice || productPrice);
+        formData.append("originalPrice", productPrice);
+        formData.append("discountPercentage", product?.discountPercentage || 0);
         formData.append("company", productCompany || product?.company || "");
         formData.append("userId", loggedInUser._id);
         formData.append(
@@ -201,7 +202,7 @@ const ProductPage = () => {
           <CustomizedInputBase onSearch={setSearchProduct} />
         </Grid>
       </Grid>
-
+      {/* 
       {respMsg && (
         <Alert
           severity={severity}
@@ -210,7 +211,7 @@ const ProductPage = () => {
         >
           {respMsg}
         </Alert>
-      )}
+      )} */}
 
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
@@ -227,10 +228,6 @@ const ProductPage = () => {
                 key={prod._id || prod.id}
                 prod={prod}
                 selectedMainImages={selectedMainImages}
-                thumbnailIndex={thumbnailIndex}
-                handlePrev={handlePrev}
-                handleNext={handleNext}
-                handleThumbnailClick={handleThumbnailClick}
                 handleAddToCart={handleAddToCart}
               />
             ))

@@ -28,12 +28,14 @@ const generateOrderEmailHTML = (orderDetails) => {
         <td style="padding: 12px; border-bottom: 1px solid #eee;">
           <strong>${item.name}</strong>
           <br><span style="color: #666; font-size: 12px;">${item.company || ""}</span>
+          ${item.discountPercentage > 0 ? `<br><span style="color: #4caf50; font-size: 12px; font-weight: bold;">${item.discountPercentage}% OFF</span>` : ""}
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">
           ${item.quantity || 1}
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
-          ₹${item.finalPrice || item.price}
+          ₹${(item.sellingPrice * (item.quantity || 1)).toFixed(2)}
+          ${item.discountPercentage > 0 ? `<br><span style="text-decoration: line-through; color: #999; font-size: 11px;">₹${(item.originalPrice * (item.quantity || 1)).toFixed(2)}</span>` : ""}
         </td>
       </tr>
     `
@@ -100,10 +102,12 @@ const generateOrderEmailHTML = (orderDetails) => {
                 <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Subtotal (${priceDetails.totalItems} items)</td>
                 <td style="text-align: right; font-weight: bold; padding: 8px 0; border-bottom: 1px solid #eee;">₹${priceDetails.originalTotal}</td>
               </tr>
+              ${Number(priceDetails.discountTotal) > 0 ? `
               <tr style="color: #4caf50;">
                 <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Discount</td>
                 <td style="text-align: right; font-weight: bold; padding: 8px 0; border-bottom: 1px solid #eee;">- ₹${priceDetails.discountTotal}</td>
               </tr>
+              ` : ''}
               <tr>
                 <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Platform Fee</td>
                 <td style="text-align: right; font-weight: bold; padding: 8px 0; border-bottom: 1px solid #eee;">₹${priceDetails.platformFee}</td>

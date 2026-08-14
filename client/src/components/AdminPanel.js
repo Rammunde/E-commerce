@@ -113,6 +113,7 @@ const AddProduct = () => {
   const [productName, setProductName] = useState("");
   const [productCompany, setProductCompany] = useState("");
   const [productPrice, setProductPrice] = useState("");
+  const [productDiscount, setProductDiscount] = useState(0);
   const [tabIndex, setTabIndex] = useState(0);
   const [users, setUsers] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(0);
@@ -255,6 +256,7 @@ const AddProduct = () => {
     setProductName("");
     setProductCompany("");
     setProductPrice("");
+    setProductDiscount(0);
   };
   const handleSelectOne = (event, productId) => {
     if (event.target.checked) {
@@ -292,6 +294,7 @@ const AddProduct = () => {
     setProductName(product.name);
     setProductCompany(product.company);
     setProductPrice(product.price);
+    setProductDiscount(product.discountPercentage ?? 0);
     setOpenModal(true);
     console.log("Edit product ", product);
 
@@ -304,6 +307,13 @@ const AddProduct = () => {
   };
 
   const saveEditProduct = () => {
+    const discountNum = productDiscount === "" ? 0 : Number(productDiscount);
+    if (isNaN(discountNum) || discountNum < 0 || discountNum > 100) {
+      setError(true);
+      setRespMsgOnEdit("Discount percentage must be between 0 and 100.");
+      return;
+    }
+
     let user_id = localStorage.getItem('user');
     let id = JSON.parse(user_id)
     // setUserId(id.data._id)
@@ -313,6 +323,7 @@ const AddProduct = () => {
       body: JSON.stringify({
         name: productName,
         price: productPrice,
+        discountPercentage: discountNum,
         company: productCompany,
         productId: currentProductId,
         userId: id?.data?._id
@@ -612,6 +623,33 @@ const AddProduct = () => {
                           variant="outlined"
                           value={productPrice}
                           onChange={(e) => setProductPrice(e.target.value)}
+                        />
+                      </Grid>
+                      <Grid item xs={12} className={classes.formElement}>
+                        <TextField
+                          fullWidth
+                          label="Discount percentage"
+                          variant="outlined"
+                          type="number"
+                          inputProps={{ min: 0, max: 100, step: "any" }}
+                          value={productDiscount}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "") {
+                              setProductDiscount("");
+                              return;
+                            }
+                            const num = parseFloat(val);
+                            if (num >= 0 && num <= 100) {
+                              setProductDiscount(val);
+                            }
+                          }}
+                          error={productDiscount !== "" && (Number(productDiscount) < 0 || Number(productDiscount) > 100 || isNaN(Number(productDiscount)))}
+                          helperText={
+                            productDiscount !== "" && (Number(productDiscount) < 0 || Number(productDiscount) > 100 || isNaN(Number(productDiscount)))
+                              ? "Discount must be between 0 and 100%"
+                              : ""
+                          }
                         />
                       </Grid>
                     </Grid>

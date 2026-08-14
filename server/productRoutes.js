@@ -15,6 +15,7 @@ const productService = require('./services/product.service');
 router.post('/addProduct', productService.addProduct);
 router.put('/updateProduct/:id', productService.updateProduct);
 router.get('/getProductList', productService.getProductList);
+router.get('/getProduct/:id', productService.getProductById);
 router.delete('/deleteProduct/:id', productService.deleteProduct);
 router.post('/editProduct', productService.editProduct);
 router.post('/addProductToCart', productService.addProductToCart);

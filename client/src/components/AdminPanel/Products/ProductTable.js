@@ -243,6 +243,7 @@ const ProductTable = () => {
         formData.append("name", p.name || "");
         formData.append("price", Number(p.price) || 0);
         formData.append("originalPrice", Number(p.originalPrice || p.price) || 0);
+        formData.append("discountPercentage", Number(p.discountPercentage) || 0);
         formData.append("company", p.company || "");
         formData.append("userId", userId || "");
         formData.append("productDescription", p.productDescription || "");
@@ -459,7 +460,25 @@ const ProductTable = () => {
                           <Typography sx={{ fontWeight: 500 }}>{product.name}</Typography>
                         </Box>
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>₹{product.price}</TableCell>
+                      <TableCell>
+                        {product.discountPercentage > 0 ? (
+                          <Box>
+                            <Typography sx={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                              ₹{Math.round(product.price - (product.price * product.discountPercentage) / 100)}
+                            </Typography>
+                            <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+                              <Typography variant="caption" sx={{ textDecoration: "line-through", color: "text.secondary" }}>
+                                ₹{product.price}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: "success.main", fontWeight: 700 }}>
+                                {product.discountPercentage}% OFF
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ) : (
+                          <Typography sx={{ fontWeight: 700 }}>₹{product.price}</Typography>
+                        )}
+                      </TableCell>
                       <TableCell>{product.company}</TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ color: '#2874f0', bgcolor: '#e3f2fd', px: 1, py: 0.5, borderRadius: '4px', display: 'inline-block', fontWeight: 500 }}>
