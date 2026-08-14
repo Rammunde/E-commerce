@@ -21,6 +21,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
   /* ================= STATES ================= */
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
+  const [discountPercentage, setDiscountPercentage] = useState(0);
   const [productCompany, setProductCompany] = useState("");
   const [productDescription, setProductDescription] = useState("");
   const [productImages, setProductImages] = useState([]);
@@ -39,7 +40,8 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
       setProductName(product.name || "");
       setProductCompany(product.company || "");
       setProductDescription(product.productDescription || "");
-      setProductPrice(product.price || "");
+      setProductPrice(product.price ?? "");
+      setDiscountPercentage(product.discountPercentage ?? 0);
 
       // Keep all existing images by default
       if (product.productImages?.length) {
@@ -83,6 +85,7 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
     setProductCompany("");
     setProductDescription("");
     setProductPrice("");
+    setDiscountPercentage(0);
     setProductImages([]);
     setFileNames("");
     setKeepImageIndexes([]);
@@ -90,7 +93,18 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
   };
 
   const isFormValid = () => {
-    return productName && productCompany && productDescription && productPrice;
+    const disc = discountPercentage === "" ? 0 : Number(discountPercentage);
+    return (
+      productName &&
+      productCompany &&
+      productDescription &&
+      productPrice !== "" &&
+      !isNaN(Number(productPrice)) &&
+      Number(productPrice) >= 0 &&
+      !isNaN(disc) &&
+      disc >= 0 &&
+      disc <= 100
+    );
   };
 
   /* ================= ADD PRODUCT API ================= */
@@ -98,10 +112,13 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
     const user = JSON.parse(localStorage.getItem("user"));
     const userId = user?.data?._id;
 
+    const disc = discountPercentage === "" ? 0 : Number(discountPercentage);
+
     const formData = new FormData();
     formData.append("name", productName);
     formData.append("price", Number(productPrice));
     formData.append("originalPrice", Number(productPrice));
+    formData.append("discountPercentage", disc);
     formData.append("company", productCompany);
     formData.append("userId", userId);
     formData.append("productDescription", productDescription);
@@ -123,8 +140,11 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
   const updateProduct = async () => {
     const formData = new FormData();
 
+    const disc = discountPercentage === "" ? 0 : Number(discountPercentage);
+
     formData.append("name", productName);
     formData.append("price", Number(productPrice));
+    formData.append("discountPercentage", disc);
     formData.append("company", productCompany);
     formData.append("productDescription", productDescription);
     formData.append("keepImageIndexes", JSON.stringify(keepImageIndexes));
@@ -239,8 +259,44 @@ const ProductDialog = ({ open, onClose, mode = "add", product }) => {
                   fullWidth
                   label="Price"
                   type="number"
+                  inputProps={{ min: 0, step: "any" }}
                   value={productPrice}
                   onChange={(e) => setProductPrice(e.target.value)}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Discount percentage"
+                  type="number"
+                  inputProps={{ min: 0, max: 100, step: "any" }}
+                  value={discountPercentage}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setDiscountPercentage("");
+                      return;
+                    }
+                    const num = parseFloat(val);
+                    if (num >= 0 && num <= 100) {
+                      setDiscountPercentage(val);
+                    }
+                  }}
+                  error={
+                    discountPercentage !== "" &&
+                    (Number(discountPercentage) < 0 ||
+                      Number(discountPercentage) > 100 ||
+                      isNaN(Number(discountPercentage)))
+                  }
+                  helperText={
+                    discountPercentage !== "" &&
+                    (Number(discountPercentage) < 0 ||
+                      Number(discountPercentage) > 100 ||
+                      isNaN(Number(discountPercentage)))
+                      ? "Discount must be between 0 and 100%"
+                      : ""
+                  }
                 />
               </Grid>
 

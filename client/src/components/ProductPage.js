@@ -15,7 +15,7 @@ import {
   Box,
   Button,
 } from "@mui/material";
-import { useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { useGetProductsQuery, useAddToCartMutation } from "../redux/apiSlice";
 import CustomizedInputBase from "../components/ProductUtils/CustomizedInputBase";
 
@@ -24,8 +24,6 @@ const ProductCard = lazy(() =>
 );
 
 const ProductPage = () => {
-  const dispatch = useDispatch();
-
   const [respMsg, setRespMsg] = useState("");
   const [open, setOpen] = useState(false);
   const [severity, setSeverity] = useState("success");
@@ -35,9 +33,11 @@ const ProductPage = () => {
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [allProducts, setAllProducts] = useState([]);
+  const [isError, setIsError] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const user = useSelector((state) => state.app.user);
   const ITEMS_PER_PAGE = 8;
 
-  /* ---------------- SEARCH DEBOUNCE ---------------- */
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchProduct);
@@ -46,14 +46,11 @@ const ProductPage = () => {
     return () => clearTimeout(handler);
   }, [searchProduct]);
 
-  /* ---------------- RTK QUERY ---------------- */
-  const { data, isLoading, isFetching, error } = useGetProductsQuery({
+  const { data, isLoading, isFetching } = useGetProductsQuery({
     page,
     limit: ITEMS_PER_PAGE,
     search: debouncedSearch,
   });
-
-  const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
 
   useEffect(() => {
     if (data?.allProducts) {
@@ -75,8 +72,17 @@ const ProductPage = () => {
     }
   };
 
-  /* ---------------- HANDLERS ---------------- */
   const handleClose = useCallback(() => setOpen(false), []);
+
+  const base64ToFile = useCallback((base64String, filename) => {
+    if (!base64String) return null;
+    const [header, data] = base64String.split(",");
+    const mimeMatch = header?.match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+    const binary = atob(data || "");
+    const array = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new File([array], filename, { type: mime });
+  }, []);
 
   const handleThumbnailClick = useCallback((productId, image) => {
     setSelectedMainImages((prev) => ({
@@ -99,6 +105,8 @@ const ProductPage = () => {
     }));
   }, []);
 
+  const [addToCart] = useAddToCartMutation();
+
   const handleAddToCart = useCallback(
     async (
       productId,
@@ -109,148 +117,101 @@ const ProductPage = () => {
       productDescription,
       product
     ) => {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user) return;
+      try {
+        setIsAddingToCart(true);
 
-      const formData = new FormData();
-      formData.append('product_id', product_id);
-      formData.append("name", productName);
-      formData.append("price", productPrice);
-      formData.append("company", productCampany);
-      formData.append("userId", res?.data?._id);
-      formData.append("productDescription", productDescription);
+        const loggedInUser = user?.data || user;
 
-      Promise.all(
-        product.images.map((image, index) =>
-          fetch(image)
-            .then((res) => res.blob())
-            .then((blob) => {
-              const file = new File([blob], `image-${index + 1}.jpg`, { type: blob.type });
-              formData.append("productImages", file);
-            })
-        )
-      )
-        .then(() => {
-          // Log form data to verify
-          for (let pair of formData.entries()) {
-            console.log(`${pair[0]}: ${pair[1]}`);
-          }
-
-          // Send form data to the server
-          return fetch("http://localhost:5000/products/addProductToCart", {
-            method: "POST",
-            body: formData,
-          });
-        })
-        .then((res) => res.json())
-        .then((data) => {
-          setRespMsg(data?.msg);
-          setIsError(data?.err);
-          updateGlobalItemCount(res?.data?._id, dispatch)
-          console.log(data);
-        })
-        .catch((err) => {
-          setRespMsg("Failed to add product to the cart");
+        if (!loggedInUser?._id) {
+          setRespMsg("Please log in before adding items to the cart.");
+          setSeverity("error");
           setIsError(true);
-          console.error("Error:", err)
-        });
-    })
+          setOpen(true);
+          return;
+        }
 
-  const closeAlert = () => {
-    setRespMsg("");
-    setIsError(false);
-  };
+        const formData = new FormData();
+        formData.append("product_id", productId);
+        formData.append("name", productName);
+        formData.append("price", productPrice);
+        formData.append("originalPrice", productPrice);
+        formData.append("discountPercentage", product?.discountPercentage || 0);
+        formData.append("company", productCompany || product?.company || "");
+        formData.append("userId", loggedInUser._id);
+        formData.append(
+          "productDescription",
+          productDescription || product?.productDescription || ""
+        );
+
+        const productImages = Array.isArray(product?.productImages)
+          ? product.productImages
+          : [];
+
+        productImages.forEach((image, index) => {
+          if (typeof image === "string" && image.startsWith("data:")) {
+            const file = base64ToFile(image, `product_${productId}_image_${index}.jpg`);
+            if (file) {
+              formData.append("productImages", file);
+            }
+          }
+        });
+
+        const responseData = await addToCart(formData).unwrap();
+
+        setRespMsg(responseData?.msg || "Product added successfully.");
+        setSeverity(responseData?.error ? "error" : "success");
+        setIsError(Boolean(responseData?.error));
+        setOpen(true);
+      } catch (error) {
+        console.error("Error adding product to cart:", error);
+
+        setRespMsg("Something went wrong while adding the product to the cart.");
+        setSeverity("error");
+        setIsError(true);
+        setOpen(true);
+      } finally {
+        setIsAddingToCart(false);
+      }
+    },
+    [user, addToCart]
+  );
 
   useEffect(() => {
-    let time = 7000;
-    if (isError) {
-      time = 10000;
-    }
-    const timmer = setTimeout(() => {
-      closeAlert();
-    }, time);
-    return () => clearTimeout(timmer);
-  }, [respMsg]);
+    if (!respMsg) return;
 
-  if (!product) {
-    return (<>
-      <Grid container spacing={3} padding={3}>
-        <Grid item xs={2}></Grid>
-        <Grid item xs={8}>
-          {respMsg &&
-            (!isError ? (
-              <Alert severity="success" onClose={closeAlert}>
-                {respMsg}
-              </Alert>
-            ) : (
-              <Alert severity="error" onClose={closeAlert}>
-                {respMsg}
-              </Alert>
-            ))}
+    const timer = setTimeout(() => {
+      setOpen(false);
+      setRespMsg("");
+      setIsError(false);
+    }, severity === "error" ? 10000 : 7000);
+
+    return () => clearTimeout(timer);
+  }, [respMsg, severity]);
+
+  const filteredProducts = allProducts;
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Grid container spacing={3} alignItems="center" mb={2}>
+        <Grid item xs={12} md={8}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Products
+          </Typography>
         </Grid>
-        <Grid item xs={2}></Grid>
-        {products.map((prod) => (
-          <Grid item xs={12} sm={4} md={3} key={prod.id}>
-            <Paper style={{ borderRadius: "25px", padding: "10px" }}>
-              <Box padding={2}>
-                <img
-                  src={prod.images[0]}
-                  alt={prod.name}
-                  style={{
-                    width: "80%",
-                    height: "200px",
-                    // objectFit: "cover",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Box display="flex" justifyContent="center" marginTop={1}>
-                  {prod.images.map((image, index) => (
-                    <img
-                      key={index}
-                      src={image}
-                      alt={`${prod.name} thumbnail ${index + 1}`}
-                      style={{
-                        width: "50px",
-                        height: "60px",
-                        objectFit: "cover",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        marginRight: "10px",
-                      }}
-                      onClick={() => handleThumbnailClick(image)}
-                    />
-                  ))}
-                </Box>
-                <Typography variant="h6" gutterBottom>
-                  {prod.name}
-                </Typography>
-                <Typography variant="subtitle1" gutterBottom>
-                  {prod.price}
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  {prod.description}
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() =>
-                    handleAddToCart(
-                      prod.id,
-                      prod.name,
-                      prod.price,
-                      prod?.company,
-                      prod?.description,
-                      prod
-                    )
-                  }
-                >
-                  Add to Cart
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-        ))}
+        <Grid item xs={12} md={4}>
+          <CustomizedInputBase onSearch={setSearchProduct} />
+        </Grid>
       </Grid>
+      {/* 
+      {respMsg && (
+        <Alert
+          severity={severity}
+          onClose={handleClose}
+          sx={{ mb: 2, borderRadius: 2 }}
+        >
+          {respMsg}
+        </Alert>
+      )} */}
 
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
@@ -259,33 +220,47 @@ const ProductPage = () => {
         <CircularProgress color="inherit" />
       </Backdrop>
 
+      <Grid container spacing={3}>
+        <Suspense fallback={<CircularProgress />}>
+          {filteredProducts?.length > 0 ? (
+            filteredProducts.map((prod) => (
+              <ProductCard
+                key={prod._id || prod.id}
+                prod={prod}
+                selectedMainImages={selectedMainImages}
+                handleAddToCart={handleAddToCart}
+              />
+            ))
+          ) : (
+            <Grid item xs={12}>
+              <Typography variant="body1" color="textSecondary">
+                {isLoading ? "Loading products..." : "No products found."}
+              </Typography>
+            </Grid>
+          )}
+        </Suspense>
+      </Grid>
+
+      {data?.totalPages > page && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+          <Button variant="contained" onClick={loadMoreProducts} disabled={isFetching}>
+            Load More
+          </Button>
+        </Box>
+      )}
+
       <Snackbar
         open={open}
         autoHideDuration={3000}
         onClose={handleClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert onClose={handleClose} severity={severity} sx={{ width: "100%", borderRadius: '8px', boxShadow: 3 }}>
+        <Alert onClose={handleClose} severity={severity} sx={{ width: "100%", borderRadius: 2 }}>
           {respMsg}
         </Alert>
       </Snackbar>
+    </Box>
+  );
+};
 
-      <Grid container spacing={3}>
-        <Suspense fallback={null}>
-          {filteredProducts.map((prod) => (
-            <ProductCard
-              key={prod._id}
-              prod={prod}
-              selectedMainImages={selectedMainImages}
-              thumbnailIndex={thumbnailIndex}
-              handlePrev={handlePrev}
-              handleNext={handleNext}
-              handleThumbnailClick={handleThumbnailClick}
-              handleAddToCart={handleAddToCart}
-            />
-          ))}
-        </Suspense>
-      </Grid></>)
-  };
-}
 export default ProductPage;

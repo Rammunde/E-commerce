@@ -4,12 +4,14 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { ObjectId } = require("mongodb");
-const { PRODUCTS, USERS_DB } = require('../common/collectionNames');
+const { PRODUCTS, USERS_DB, ACTIVE_CART, ORDERS } = require('../common/collectionNames');
 const { sendOrderConfirmation } = require('./email.service');
+
 module.exports = {
   addProduct,
   updateProduct,
   getProductList,
+  getProductById,
   deleteProduct,
   editProduct,
   addProductToCart,
@@ -18,7 +20,6 @@ module.exports = {
   IncreaseDecreaseItems,
   getAllProductList,
   updatePriceTypeScript,
-  deleteProduct,
   placeOrder,
 };
 
@@ -36,11 +37,23 @@ const storage = multer.memoryStorage({
   }
 });
 
-
 const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit
 });
+
+/**
+ * Validate and sanitize discount percentage
+ * @param {*} value 
+ * @returns {number} valid discount between 0 and 100
+ */
+function sanitizeDiscountPercentage(value) {
+  if (value === undefined || value === null || value === "") return 0;
+  const num = parseFloat(value);
+  if (isNaN(num) || num < 0) return 0;
+  if (num > 100) return 100;
+  return Number(num.toFixed(2));
+}
 
 async function addProduct(req, res) {
   const uploadMiddleware = upload.array('productImages');
@@ -53,7 +66,7 @@ async function addProduct(req, res) {
       });
     });
 
-    const { name, price, originalPrice, company, userId, productDescription } = req.body;
+    const { name, price, originalPrice, discountPercentage, company, userId, productDescription } = req.body;
     const files = req.files || [];
     const base64Images = await Promise.all(files.map(file => {
       if (!file.buffer) {
@@ -69,10 +82,18 @@ async function addProduct(req, res) {
       });
     }));
 
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({ err: true, msg: "Please enter a valid price." });
+    }
+
+    const validatedDiscount = sanitizeDiscountPercentage(discountPercentage);
+
     const productDoc = {
       name: name,
-      price: parseFloat(price),
-      originalPrice: parseFloat(originalPrice),
+      price: parsedPrice,
+      originalPrice: parsedPrice,
+      discountPercentage: validatedDiscount,
       company: company,
       userId: userId,
       productDescription: productDescription,
@@ -106,6 +127,7 @@ async function updateProduct(req, res) {
     const {
       name,
       price,
+      discountPercentage,
       company,
       productDescription,
       keepImageIndexes,
@@ -126,7 +148,7 @@ async function updateProduct(req, res) {
         .json({ err: true, msg: "Product not found" });
     }
 
-    // ✅ filter existing images
+    // filter existing images
     let finalImages = [];
     if (keepImageIndexes) {
       const indexes = JSON.parse(keepImageIndexes);
@@ -135,17 +157,21 @@ async function updateProduct(req, res) {
       );
     }
 
-    // ✅ convert new images
+    // convert new images
     const newImages = files.map((file) =>
       `data:${file.mimetype};base64,${file.buffer.toString("base64")}`
     );
 
     finalImages = [...finalImages, ...newImages];
 
+    const parsedPrice = price !== undefined ? parseFloat(price) : undefined;
+    const validatedDiscount = discountPercentage !== undefined ? sanitizeDiscountPercentage(discountPercentage) : undefined;
+
     // build update doc
     const updateDoc = {
       ...(name && { name }),
-      ...(price && { price: Number(price) }),
+      ...(parsedPrice !== undefined && !isNaN(parsedPrice) && { price: parsedPrice, originalPrice: parsedPrice }),
+      ...(validatedDiscount !== undefined && { discountPercentage: validatedDiscount }),
       ...(company && { company }),
       ...(productDescription && { productDescription }),
       ...(finalImages.length && { productImages: finalImages }),
@@ -170,8 +196,6 @@ async function updateProduct(req, res) {
   }
 }
 
-
-
 async function getProductList(req, res) {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -191,8 +215,16 @@ async function getProductList(req, res) {
       .limit(limit)
       .toArray();
 
+    // Ensure numeric fields
+    const formattedList = productList.map((p) => ({
+      ...p,
+      price: Number(p.price) || 0,
+      originalPrice: Number(p.originalPrice || p.price) || 0,
+      discountPercentage: Number(p.discountPercentage) || 0,
+    }));
+
     res.status(200).json({
-      allProducts: productList,
+      allProducts: formattedList,
       totalCount,
       currentPage: page,
       totalPages: Math.ceil(totalCount / limit)
@@ -203,16 +235,47 @@ async function getProductList(req, res) {
   }
 }
 
+async function getProductById(req, res) {
+  try {
+    const { id } = req.params;
+    if (!id || !ObjectId.isValid(id)) {
+      return res.status(400).json({ err: true, msg: "Invalid product ID" });
+    }
+    const collection = await db.connectProductsDb();
+    const product = await collection.findOne({ _id: new ObjectId(id) });
+    if (!product) {
+      return res.status(404).json({ err: true, msg: "Product not found" });
+    }
+
+    const formattedProduct = {
+      ...product,
+      price: Number(product.price) || 0,
+      originalPrice: Number(product.originalPrice || product.price) || 0,
+      discountPercentage: Number(product.discountPercentage) || 0,
+    };
+
+    res.status(200).json({ err: false, product: formattedProduct });
+  } catch (error) {
+    console.error("Error in getProductById:", error);
+    res.status(500).json({ err: true, msg: "Internal server error" });
+  }
+}
+
 async function deleteProduct(req, res) {
   const productId = req.params.id;
 
   try {
+    const conn = await db.connectEcomerceDB();
+    const active_cart_collection = conn.collection(config.ACTIVE_CART || ACTIVE_CART);
     const collection = await db.connectProductsDb();
-    // const result = await collection.deleteOne({ _id: productId});
+
     const isExist = await collection.findOne({ _id: new ObjectId(productId) });
     if (isExist) {
-      const result = await collection.deleteOne({
+      await collection.deleteOne({
         _id: new ObjectId(productId),
+      });
+      await active_cart_collection.deleteMany({
+        product_id: productId,
       });
       res.status(200).json({ err: false, msg: "Product deleted successfully" });
     } else {
@@ -225,18 +288,39 @@ async function deleteProduct(req, res) {
 }
 
 async function editProduct(req, res) {
-  const { productId, name, company, price, userId } = req.body;
+  const { productId, name, company, price, discountPercentage, userId } = req.body;
 
-  const collection = await db.connectProductsDb();
-  const convertedPrices = parseFloat(price);
-  let result = await collection.updateOne(
-    { _id: new ObjectId(productId) },
-    { $set: { name, price: convertedPrices, originalPrice: convertedPrices, company, userId } }
-  );
-  if (result.modifiedCount > 0) {
-    res.status(200).json({ err: false, msg: "Product Updated successfully" });
-  }
-  else {
+  try {
+    const collection = await db.connectProductsDb();
+    const convertedPrices = parseFloat(price);
+    if (isNaN(convertedPrices) || convertedPrices < 0) {
+      return res.status(400).json({ err: true, msg: "Invalid price" });
+    }
+
+    const validatedDiscount = sanitizeDiscountPercentage(discountPercentage);
+
+    let result = await collection.updateOne(
+      { _id: new ObjectId(productId) },
+      {
+        $set: {
+          name,
+          price: convertedPrices,
+          originalPrice: convertedPrices,
+          discountPercentage: validatedDiscount,
+          company,
+          userId,
+          updatedAt: new Date(),
+        }
+      }
+    );
+
+    if (result.matchedCount > 0) {
+      res.status(200).json({ err: false, msg: "Product Updated successfully" });
+    } else {
+      res.status(404).json({ err: true, msg: "Product not found" });
+    }
+  } catch (error) {
+    console.error("Error in editProduct:", error);
     res.status(500).json({ err: true, msg: "Internal Server Error" });
   }
 }
@@ -252,45 +336,50 @@ async function addProductToCart(req, res) {
       });
     });
 
-    const { product_id, name, price, company, userId, productDescription, originalPrice } = req.body;
+    const { product_id, name, price, company, userId, productDescription, discountPercentage } = req.body;
     const conn = await db.connectEcomerceDB();
-    const collection = conn.collection(config.ACTIVE_CART);
+    const collection = conn.collection(config.ACTIVE_CART || ACTIVE_CART);
     const exist = await collection.findOne({ product_id, userId });
     if (exist) {
       return res.status(200).json({ error: false, msg: "Item already present in your cart" });
     }
 
+    // Lookup latest product in DB to ensure fresh pricing data
+    const productsColl = await db.connectProductsDb();
+    let dbProduct = null;
+    if (product_id && ObjectId.isValid(product_id)) {
+      dbProduct = await productsColl.findOne({ _id: new ObjectId(product_id) });
+    }
 
     const files = req.files || [];
-    const base64Images = await Promise.all(files.map(file => {
-      if (!file.buffer) {
-        throw new Error("File buffer is missing");
-      }
-      return new Promise((resolve, reject) => {
-        try {
-          const base64String = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-          resolve(base64String);
-        } catch (error) {
-          reject(error);
-        }
-      });
-    }));
+    let base64Images = [];
+    if (files.length > 0) {
+      base64Images = await Promise.all(files.map(file => {
+        if (!file.buffer) throw new Error("File buffer is missing");
+        return Promise.resolve(`data:${file.mimetype};base64,${file.buffer.toString('base64')}`);
+      }));
+    } else if (dbProduct?.productImages?.length) {
+      base64Images = dbProduct.productImages;
+    }
 
+    const itemPrice = dbProduct ? Number(dbProduct.price) : parseFloat(price) || 0;
+    const itemDiscount = dbProduct ? Number(dbProduct.discountPercentage) || 0 : sanitizeDiscountPercentage(discountPercentage);
 
     const productDoc = {
       product_id: product_id,
-      name: name,
-      price: parseFloat(price),
-      originalPrice: parseFloat(originalPrice),
-      company: company,
+      name: dbProduct?.name || name,
+      price: itemPrice,
+      originalPrice: itemPrice,
+      discountPercentage: itemDiscount,
+      company: dbProduct?.company || company,
       userId: userId,
-      productDescription: productDescription,
-      productImages: base64Images, // Base64-encoded images
+      productDescription: dbProduct?.productDescription || productDescription,
+      productImages: base64Images,
       registrationDate: new Date(),
       quantity: 1
     };
 
-    let result = await collection.insertOne(productDoc);
+    await collection.insertOne(productDoc);
 
     res.status(200).json({ error: false, msg: "Item successfully added to your cart" });
   } catch (error) {
@@ -304,40 +393,43 @@ async function getAddedItems(req, res) {
     const userId = req.params.userId;
 
     const conn = await db.connectEcomerceDB();
-    const collection = conn.collection(config.ACTIVE_CART);
+    const collection = conn.collection(config.ACTIVE_CART || ACTIVE_CART);
+    const productsColl = await db.connectProductsDb();
 
-    const pipeline = [
-      {
-        $match: { userId: userId },
-      },
-      // {
-      //   $group: {
-      //     _id: "$name",
-      //     productDetails: { $first: "$$ROOT" },
-      //     quantity: { $sum: 1 },
-      //   },
-      // },
-      // {
-      //   $project: {
-      //     _id: 0,
-      //     name: "$_id", // Use `_id` (grouped name) as `name`
-      //     product_id: "$productDetails.product_id",
-      //     price: "$productDetails.price",
-      //     company: "$productDetails.company",
-      //     userId: "$productDetails.userId",
-      //     productDescription: "$productDetails.productDescription",
-      //     productImages: { $slice: ["$productDetails.productImages", 1] },
-      //     quantity: 1,
-      //   },
-      // },
-    ];
+    const cartDocs = await collection.find({ userId }).toArray();
 
-    const result = await collection.aggregate(pipeline).toArray();
+    if (cartDocs.length > 0) {
+      // Sync fresh prices from products DB where available
+      const enrichedItems = await Promise.all(
+        cartDocs.map(async (item) => {
+          let dbProduct = null;
+          if (item.product_id && ObjectId.isValid(item.product_id)) {
+            dbProduct = await productsColl.findOne({ _id: new ObjectId(item.product_id) });
+          }
 
-    if (result.length > 0) {
+          const originalPrice = dbProduct ? Number(dbProduct.price) || 0 : Number(item.originalPrice || item.price) || 0;
+          const discountPercentage = dbProduct
+            ? Number(dbProduct.discountPercentage) || 0
+            : Number(item.discountPercentage) || 0;
+
+          const discountAmount = Number(((originalPrice * discountPercentage) / 100).toFixed(2));
+          const sellingPrice = Number((originalPrice - discountAmount).toFixed(2));
+
+          return {
+            ...item,
+            originalPrice,
+            price: originalPrice,
+            discountPercentage,
+            discountAmount,
+            sellingPrice,
+            finalPrice: sellingPrice,
+          };
+        })
+      );
+
       res.status(200).json({
-        result: result,
-        total_items: result.length,
+        result: enrichedItems,
+        total_items: enrichedItems.length,
         msg: "",
         error: false,
       });
@@ -364,26 +456,19 @@ async function removeAddedItems(req, res) {
   try {
     const { product_id, userId } = req.body;
     const conn = await db.connectEcomerceDB();
-    const collection = conn.collection(config.ACTIVE_CART);
-    const result = await collection.deleteOne(
-      {
-        product_id: product_id
-      },
-      {
-        userId: userId
-      }
-    )
+    const collection = conn.collection(config.ACTIVE_CART || ACTIVE_CART);
+    await collection.deleteOne({ product_id, userId });
     res.status(200).json({ msg: "Product removed successfully", err: false });
   } catch (error) {
-    console.log("Error in removeAddedItems");
-    res.status(500).json({ msg: "Error occured while removing item", err: true });
+    console.log("Error in removeAddedItems", error);
+    res.status(500).json({ msg: "Error occurred while removing item", err: true });
   }
 }
 
 async function updatePriceTypeScript() {
   try {
     const conn = await db.connectEcomerceDB();
-    const collection = conn.collection(config.ACTIVE_CART);
+    const collection = conn.collection(config.ACTIVE_CART || ACTIVE_CART);
 
     const cursor = collection.find({ price: { $type: "string" } });
 
@@ -392,7 +477,7 @@ async function updatePriceTypeScript() {
       if (!isNaN(numericPrice)) {
         await collection.updateOne(
           { _id: doc._id },
-          { $set: { price: numericPrice } }
+          { $set: { price: numericPrice, originalPrice: numericPrice } }
         );
       }
     }
@@ -405,37 +490,36 @@ async function updatePriceTypeScript() {
 
 async function IncreaseDecreaseItems(req, res) {
   try {
-
-    const { product_id, userId, plus, minus, originalPrice } = req.body;
+    const { product_id, userId, plus, minus } = req.body;
     const conn = await db.connectEcomerceDB();
-    const collection = conn.collection(config.ACTIVE_CART);
+    const collection = conn.collection(config.ACTIVE_CART || ACTIVE_CART);
 
     const incrementValue = plus ? 1 : minus ? -1 : 0;
 
-    const convertPriceType = parseFloat(originalPrice);
-    const updatePrice = plus ? convertPriceType : minus ? -convertPriceType : 0
     await collection.updateOne(
       { product_id, userId },
-      { $inc: { quantity: incrementValue, price: updatePrice } });
+      { $inc: { quantity: incrementValue } }
+    );
 
-    let updateResult = await collection.findOne({ product_id, userId });
+    const updateResult = await collection.findOne({ product_id, userId });
     if (updateResult && updateResult.quantity <= 0) {
       await collection.deleteOne({ product_id, userId });
     }
-    res.status(200).json({ msg: "Succesfully update count", err: false });
+    res.status(200).json({ msg: "Successfully updated count", err: false });
   } catch (error) {
-    res.status(400).json({ msg: "error in increaseDecreaseItems", err: true });
+    console.error("Error in IncreaseDecreaseItems:", error);
+    res.status(400).json({ msg: "Error in IncreaseDecreaseItems", err: true });
   }
 }
 
 async function getAllProductList(req, res) {
   try {
-    const { searchString = "", sortBy = 'name', sortOrder = 'asc', limit = 10, offset = 0 } = req.body;
+    const { searchString = "", sortBy = 'name', sortOrder = 'asc' } = req.body;
     const collection = await db.connectProductsDb();
     let andArray = [{}];
 
     if (searchString) {
-      andArray.push({ name: { $regex: searchString, $options: "i" } })
+      andArray.push({ name: { $regex: searchString, $options: "i" } });
     }
 
     const pipeline = [];
@@ -490,19 +574,20 @@ async function getAllProductList(req, res) {
       }
     );
 
-
     pipeline.push({ $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } });
 
     const productList = await collection.aggregate(pipeline).toArray();
 
-    let totalCount = 0;
-    if (productList.length > 0) {
-      totalCount = productList.length;
-    }
+    const formattedList = productList.map((p) => ({
+      ...p,
+      price: Number(p.price) || 0,
+      originalPrice: Number(p.originalPrice || p.price) || 0,
+      discountPercentage: Number(p.discountPercentage) || 0,
+    }));
 
     res.json({
-      productList: productList,
-      totalCount: totalCount,
+      productList: formattedList,
+      totalCount: formattedList.length,
       msg: "Product List Retrieved Successfully",
     });
   } catch (error) {
@@ -511,35 +596,7 @@ async function getAllProductList(req, res) {
   }
 }
 
-
-async function deleteProduct(req, res) {
-  const productId = req.params.id;
-  console.log("productId", productId);
-
-  try {
-    const conn = await db.connectEcomerceDB();
-    const active_cart_collection = conn.collection(config.ACTIVE_CART);
-    const collection = await db.connectProductsDb();
-    // const result = await collection.deleteOne({ _id: userId});
-    const isExist = await collection.findOne({ _id: new ObjectId(productId) });
-    if (isExist) {
-      await collection.deleteOne({
-        _id: new ObjectId(productId),
-      });
-      await active_cart_collection.deleteOne({
-        product_id: productId,
-      });
-      res.status(200).json({ err: false, msg: "Product deleted successfully" });
-    } else {
-      res.status(200).json({ err: true, msg: "Product not exist" });
-    }
-  } catch (error) {
-    console.error("Error while deleting product:", error);
-    res.status(500).json({ err: true, msg: "Internal Server Error" });
-  }
-}
-
-// Place Order with Email Confirmation
+// Place Order with Backend Price Calculation, Order Snapshot, and Email Confirmation
 async function placeOrder(req, res) {
   try {
     const { userId } = req.body;
@@ -550,7 +607,7 @@ async function placeOrder(req, res) {
 
     // Get cart items
     const conn = await db.connectEcomerceDB();
-    const cartCollection = conn.collection(config.ACTIVE_CART);
+    const cartCollection = conn.collection(config.ACTIVE_CART || ACTIVE_CART);
     const cartItems = await cartCollection.find({ userId }).toArray();
 
     if (!cartItems || cartItems.length === 0) {
@@ -558,44 +615,74 @@ async function placeOrder(req, res) {
     }
 
     // Get user details
-    const usersCollection = conn.collection(config.USERS_DB || "users");
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const usersCollection = conn.collection(config.USERS_DB || USERS_DB);
+    let user = null;
+    if (ObjectId.isValid(userId)) {
+      user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    }
 
     if (!user || !user.email) {
       return res.status(400).json({ err: true, msg: "User not found or email not available" });
     }
 
-    // Calculate price details
-    const PLATFORM_FEE = 3;
-    const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const originalTotal = cartItems.reduce(
-      (sum, item) => sum + (parseFloat(item.price) || 0),
-      0
-    );
-    const discountTotal = cartItems.reduce((sum, item) => {
-      const price = parseFloat(item.originalPrice) || parseFloat(item.price) || 0;
-      return sum + (price * 0.1 * (item.quantity || 1)); // 10% discount
-    }, 0);
-    const finalTotal = originalTotal - discountTotal + PLATFORM_FEE;
+    // Fetch live products from DB and compute server-side prices (never trust frontend prices)
+    const productsCollection = await db.connectProductsDb();
 
-    // Generate order ID
+    const orderItems = await Promise.all(
+      cartItems.map(async (cartItem) => {
+        let product = null;
+        if (cartItem.product_id && ObjectId.isValid(cartItem.product_id)) {
+          product = await productsCollection.findOne({ _id: new ObjectId(cartItem.product_id) });
+        }
+
+        // Base price from DB (fallback to stored cart price only if deleted)
+        const originalPrice = product ? Number(product.price) || 0 : Number(cartItem.price) || 0;
+        const discountPercentage = product
+          ? sanitizeDiscountPercentage(product.discountPercentage)
+          : sanitizeDiscountPercentage(cartItem.discountPercentage);
+
+        // discountAmount = price * discountPercentage / 100
+        const discountAmount = Number(((originalPrice * discountPercentage) / 100).toFixed(2));
+        // sellingPrice = price - discountAmount
+        const sellingPrice = Number((originalPrice - discountAmount).toFixed(2));
+        const quantity = Number(cartItem.quantity) || 1;
+        const totalPrice = Number((sellingPrice * quantity).toFixed(2));
+
+        return {
+          productId: product?._id ? product._id.toString() : cartItem.product_id,
+          name: product?.name || cartItem.name,
+          company: product?.company || cartItem.company || "",
+          productImages: product?.productImages || cartItem.productImages || [],
+          quantity,
+          originalPrice,
+          discountPercentage,
+          discountAmount,
+          sellingPrice,
+          totalPrice,
+        };
+      })
+    );
+
+    // Calculate order summary
+    const PLATFORM_FEE = 3;
+    const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+    const originalTotal = Number(
+      orderItems.reduce((sum, item) => sum + item.originalPrice * item.quantity, 0).toFixed(2)
+    );
+    const discountTotal = Number(
+      orderItems.reduce((sum, item) => sum + item.discountAmount * item.quantity, 0).toFixed(2)
+    );
+    const finalTotal = Number((originalTotal - discountTotal + PLATFORM_FEE).toFixed(2));
+
+    // Generate unique order ID
     const orderId = `ORD${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
 
-    // Prepare order items with calculated prices
-    const orderItems = cartItems.map((item) => {
-      const price = parseFloat(item.price) || 0;
-      const discount = price * 0.1;
-      return {
-        ...item,
-        discount: discount.toFixed(2),
-        finalPrice: (price - discount).toFixed(2),
-      };
-    });
-
-    // Prepare order details for email
-    const orderDetails = {
+    // Prepare order details for persistence
+    const orderDoc = {
       orderId,
+      userId,
       userName: user.fullName || user.firstName || "Customer",
+      userEmail: user.email,
       orderItems,
       priceDetails: {
         totalItems,
@@ -604,10 +691,25 @@ async function placeOrder(req, res) {
         platformFee: PLATFORM_FEE,
         finalTotal: finalTotal.toFixed(2),
       },
+      status: "Confirmed",
+      orderDate: new Date(),
     };
 
-    // Send email
-    await sendOrderConfirmation(user.email, orderDetails);
+    // Store the order snapshot in the database
+    const ordersCollection = conn.collection(config.ORDERS || ORDERS);
+    await ordersCollection.insertOne(orderDoc);
+
+    // Send confirmation email
+    try {
+      await sendOrderConfirmation(user.email, {
+        orderId,
+        userName: orderDoc.userName,
+        orderItems,
+        priceDetails: orderDoc.priceDetails,
+      });
+    } catch (emailError) {
+      console.warn("Failed to send order email:", emailError.message);
+    }
 
     // Clear cart after successful order
     await cartCollection.deleteMany({ userId });

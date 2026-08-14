@@ -23,8 +23,7 @@ const IdleTimer = () => {
         }
 
         // Only set timer if user is logged in
-        const auth = sessionStorage.getItem('user');
-        if (auth || (user && Object.keys(user).length > 0)) {
+        if (user && (user.data || user._id)) {
             timeoutRef.current = setTimeout(() => {
                 console.log('User idle for 15 minutes. Logging out...');
                 handleLogout();

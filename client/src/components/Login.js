@@ -16,7 +16,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
 import { useLoginUserMutation } from "../redux/apiSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../redux/appSlice";
 import { PORTAL_NAME } from "../config";
 
@@ -28,17 +28,19 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [respMsg, setRespMsg] = useState("");
+  const [error, setError] = useState(false);
   const [loginUser, { isLoading }] = useLoginUserMutation();
 
+  const userFromStore = useSelector((state) => state.app.user);
+
   // Redirect if already logged in
+  console.log("error", error)
   useEffect(() => {
-    const auth = sessionStorage.getItem("user");
-    if (auth) {
-      const parsed = JSON.parse(auth);
-      const role = parsed?.data?.role;
+    if (userFromStore && (userFromStore.data || userFromStore._id)) {
+      const role = userFromStore.data?.role || userFromStore.role;
       navigate(role === "Admin" ? "/user-management" : "/product");
     }
-  }, [navigate]);
+  }, [navigate, userFromStore]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -51,20 +53,15 @@ const LoginPage = () => {
       const result = await loginUser({ username, password }).unwrap();
       if (result) {
         dispatch(setUser(result));
-        sessionStorage.setItem("user", JSON.stringify(result));
         setRespMsg("Login successful!");
+        setError(false);
         const isAdmin = result?.data?.role === "Admin";
         setTimeout(() => navigate(isAdmin ? "/user-management" : "/product"), 1000);
       }
     } catch (err) {
       setRespMsg(err?.data?.msg || "Login failed. Please try again.");
+      setError(true);
     }
-  };
-
-  const clearForm = () => {
-    setUsername("");
-    setPassword("");
-    setRespMsg("");
   };
 
   return (
@@ -101,8 +98,12 @@ const LoginPage = () => {
 
           {respMsg && (
             <Alert
-              severity={respMsg.toLowerCase().includes("failed") ? "error" : "success"}
+              severity={error ? "error" : "success"}
               sx={{ width: "100%", mb: 3 }}
+              onClose={() => {
+                setRespMsg("");
+                setError(false);
+              }}
             >
               {respMsg}
             </Alert>

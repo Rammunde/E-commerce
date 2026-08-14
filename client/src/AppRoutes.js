@@ -1,7 +1,9 @@
 import { Routes, Route } from "react-router-dom";
+import { useSelector } from "react-redux";
 import PrivateComponent from "./components/PrivateComponent";
 import HomePage from "./components/Home";
 import ProductPage from "./components/ProductPage";
+import ProductDetailPage from "./components/ProductDetailPage";
 import Container from "./components/container/Container";
 import ContactUs from "./components/ContactUs/ContactUs";
 // import AdminPanel from "./components/AdminPanel";
@@ -12,7 +14,7 @@ import SignUp from "./components/SignUp";
 import Login from './components/Login';
 
 const AppRoutes = () => {
-  const user = JSON.parse(sessionStorage.getItem('user'));
+  const user = useSelector((state) => state.app.user);
   const isAdmin = user?.data?.role === 'Admin';
 
   console.log("isAdmin", isAdmin)
@@ -21,9 +23,9 @@ const AppRoutes = () => {
       <Route element={<PrivateComponent />}>
         {!isAdmin && (
           <>
-            <Route path="/" element={<HomePage />} />
+            {/* <Route path="/" element={<HomePage />} /> */}
             <Route path="/product" element={<ProductPage />} />
-            <Route path="/product/:id" element={<ProductPage />} />
+            <Route path="/product/detail/:id" element={<ProductDetailPage />} />
             <Route path="/contactUs" element={<ContactUs />} />
             <Route path="/cart" element={<Container />} />
             <Route path="/logout" element={<h1>Logout products list</h1>} />
@@ -43,5 +45,6 @@ const AppRoutes = () => {
     </Routes>
   );
 };
+
 
 export default AppRoutes;

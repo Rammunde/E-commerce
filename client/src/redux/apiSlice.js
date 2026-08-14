@@ -25,12 +25,32 @@ export const apiSlice = createApi({
             }),
             invalidatesTags: ["Cart"],
         }),
+        removeFromCart: builder.mutation({
+            query: ({ product_id, userId }) => ({
+                url: "/products/removeAddedItems",
+                method: "POST",
+                body: { product_id, userId },
+            }),
+            invalidatesTags: ["Cart"],
+        }),
+        updateCartQuantity: builder.mutation({
+            query: ({ product_id, userId, price, originalPrice, plus, minus }) => ({
+                url: "/products/IncreaseDecreaseItems",
+                method: "POST",
+                body: { product_id, userId, price, originalPrice, plus, minus },
+            }),
+            invalidatesTags: ["Cart"],
+        }),
         loginUser: builder.mutation({
             query: (credentials) => ({
                 url: "/users/loginUser",
                 method: "POST",
                 body: credentials,
             }),
+        }),
+        getProductById: builder.query({
+            query: (id) => `/products/getProduct/${id}`,
+            providesTags: (result, error, id) => [{ type: "Products", id }],
         }),
     }),
 });
@@ -39,5 +59,8 @@ export const {
     useGetProductsQuery,
     useGetCartCountQuery,
     useAddToCartMutation,
+    useRemoveFromCartMutation,
+    useUpdateCartQuantityMutation,
     useLoginUserMutation,
+    useGetProductByIdQuery,
 } = apiSlice;

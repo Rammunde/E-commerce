@@ -14,9 +14,10 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import { updateGlobalItemCount } from "../../commonApi";
 import { useDispatch } from "react-redux";
+import { useRemoveFromCartMutation, useUpdateCartQuantityMutation } from "../../redux/apiSlice";
 import ProductImagesDialog from "../AdminPanel/Products/ProductImagesDialog";
+import { useSelector } from "react-redux";
 
 // API Configuration
 const API_BASE_URL = "http://localhost:5000";
@@ -31,30 +32,31 @@ const Cart = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
+  const user = useSelector((state) => state.app.user);
 
   const handleOpenImages = (images) => {
     setSelectedImages(images);
     setOpenImageDialog(true);
   };
 
-  // Get user ID from localStorage
+  // Get user ID from state / localStorage
   const getUserId = useCallback(() => {
-    const user = localStorage.getItem("user");
-    return user ? JSON.parse(user)?.data?._id : null;
-  }, []);
+    const loggedInUser = user?.data || user;
+    return loggedInUser?._id;
+  }, [user]);
 
   // Calculate price details dynamically
   const priceDetails = useMemo(() => {
     const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     const originalTotal = cartItems.reduce(
-      (sum, item) => sum + (parseFloat(item.price) || 0) * (item.quantity || 1),
+      (sum, item) => sum + (parseFloat(item.originalPrice || item.price) || 0) * (item.quantity || 1),
       0
     );
     const discountTotal = cartItems.reduce(
-      (sum, item) => sum + (parseFloat(item.discount) || 0) * (item.quantity || 1),
+      (sum, item) => sum + (parseFloat(item.discountAmount) || 0) * (item.quantity || 1),
       0
     );
-    const finalTotal = originalTotal - discountTotal + PLATFORM_FEE;
+    const finalTotal = cartItems.length > 0 ? originalTotal - discountTotal + PLATFORM_FEE : 0;
 
     return {
       totalItems,
@@ -66,26 +68,23 @@ const Cart = () => {
     };
   }, [cartItems]);
 
+  const [removeFromCart] = useRemoveFromCartMutation();
+  const [updateCartQuantity] = useUpdateCartQuantityMutation();
+
   const handleRemove = async (item) => {
     try {
-      await fetch(`${API_BASE_URL}/products/removeAddedItems`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: item.product_id,
-          userId: item.userId,
-        }),
-      });
+      await removeFromCart({
+        product_id: item.product_id,
+        userId: item.userId,
+      }).unwrap();
+
       setSnackbar({
         open: true,
         message: "Item removed from cart",
         severity: "success",
       });
-      const userId = getUserId();
-      if (userId) {
-        updateGlobalItemCount(userId, dispatch);
-      }
-      getAddedItems();
+
+      await getAddedItems();
     } catch (error) {
       setSnackbar({
         open: true,
@@ -97,23 +96,16 @@ const Cart = () => {
 
   const handleQuantityChange = async (item, isIncrease) => {
     try {
-      await fetch(`${API_BASE_URL}/products/IncreaseDecreaseItems`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: item.product_id,
-          userId: item.userId,
-          price: item.price,
-          originalPrice: item.originalPrice,
-          plus: isIncrease,
-          minus: !isIncrease,
-        }),
-      });
-      const userId = getUserId();
-      if (userId) {
-        updateGlobalItemCount(userId, dispatch);
-      }
-      getAddedItems();
+      await updateCartQuantity({
+        product_id: item.product_id,
+        userId: item.userId,
+        price: item.price,
+        originalPrice: item.originalPrice,
+        plus: isIncrease,
+        minus: !isIncrease,
+      }).unwrap();
+
+      await getAddedItems();
     } catch (error) {
       setSnackbar({
         open: true,
@@ -150,7 +142,6 @@ const Cart = () => {
           severity: "success",
         });
         setCartItems([]);
-        updateGlobalItemCount(userId, dispatch);
       } else {
         throw new Error(data.msg || "Failed to place order");
       }
@@ -180,16 +171,20 @@ const Cart = () => {
       const data = await response.json();
 
       const updatedResult = (data.result || []).map((record) => {
-        const price = parseFloat(record.price) || 0;
-        const discount = price * 0.1; // 10% discount
-        const finalPrice = price - discount;
+        const originalPrice = parseFloat(record.price || record.originalPrice) || 0;
+        const discountPercentage = Math.min(100, Math.max(0, parseFloat(record.discountPercentage) || 0));
+        const discountAmount = discountPercentage > 0 ? (originalPrice * discountPercentage) / 100 : 0;
+        const sellingPrice = originalPrice - discountAmount;
 
         return {
           ...record,
           stock: "In Stock",
           delivery: "Free",
-          discount: discount.toFixed(2),
-          finalPrice: finalPrice.toFixed(2),
+          originalPrice,
+          discountPercentage,
+          discountAmount,
+          sellingPrice,
+          finalPrice: sellingPrice,
         };
       });
       setCartItems(updatedResult);
@@ -202,22 +197,18 @@ const Cart = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getUserId]);
 
   useEffect(() => {
     getAddedItems();
-    const userId = getUserId();
-    if (userId) {
-      updateGlobalItemCount(userId, dispatch);
-    }
-  }, [getAddedItems, getUserId, dispatch]);
+  }, [getAddedItems]);
 
   const handleCloseSnackbar = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   return (
-    <Box p={4}>
+    <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: "background.default", minHeight: "100vh", fontFamily: "Roboto, sans-serif" }}>
       <ProductImagesDialog
         open={openImageDialog}
         images={selectedImages}
@@ -229,13 +220,13 @@ const Cart = () => {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ borderRadius: "4px" }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
 
-      <Typography variant="h5" mb={2} display="flex" alignItems="center" gap={1}>
-        <ShoppingCartIcon /> Your Cart
+      <Typography variant="h5" fontWeight={700} mb={3} display="flex" alignItems="center" gap={1} color="text.primary">
+        <ShoppingCartIcon color="primary" /> Your Cart
       </Typography>
 
       {loading ? (
@@ -262,7 +253,7 @@ const Cart = () => {
           {/* Cart Items */}
           <Grid item xs={12} md={8}>
             {cartItems.map((item) => (
-              <Paper elevation={3} key={item._id || item.product_id} sx={{ mb: 2, p: 2 }}>
+              <Paper elevation={1} key={item._id || item.product_id} sx={{ mb: 2, p: 2, borderRadius: "4px" }}>
                 <Grid container spacing={2} alignItems="center">
                   {/* Product Image */}
                   <Grid item xs={3}>
@@ -274,11 +265,12 @@ const Cart = () => {
                             alt={`${item.name}-${index}`}
                             onClick={() => handleOpenImages(item.productImages)}
                             style={{
-                              width: "60px",
-                              height: "60px",
-                              borderRadius: "8px",
-                              objectFit: "cover",
+                              width: "64px",
+                              height: "64px",
+                              borderRadius: "4px",
+                              objectFit: "contain",
                               cursor: "pointer",
+                              border: "1px solid #f0f0f0",
                             }}
                           />
 
@@ -289,15 +281,16 @@ const Cart = () => {
                                 position: "absolute",
                                 top: 0,
                                 left: 0,
-                                width: "60px",
-                                height: "60px",
-                                borderRadius: "8px",
-                                background: "rgba(0,0,0,0.6)",
+                                width: "64px",
+                                height: "64px",
+                                borderRadius: "4px",
+                                background: "rgba(0,0,0,0.55)",
                                 color: "#fff",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontWeight: "bold",
+                                fontWeight: 700,
+                                fontSize: "0.85rem",
                                 cursor: "pointer",
                               }}
                             >
@@ -311,52 +304,61 @@ const Cart = () => {
 
                   {/* Product Details */}
                   <Grid item xs={6}>
-                    <Typography variant="subtitle1" fontWeight="bold">
+                    <Typography variant="body2" fontWeight={700} color="text.primary" sx={{ fontSize: "0.9rem", lineHeight: 1.4 }}>
                       {item.name}
                     </Typography>
                     <Typography
-                      color={
-                        item.stock === "Out of Stock" ? "error" : "success.main"
-                      }
+                      variant="caption"
+                      fontWeight={600}
+                      color={item.stock === "Out of Stock" ? "error" : "success.main"}
                     >
                       {item.stock}
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="caption" display="block" color="text.secondary">
                       Delivery: <b>{item.delivery}</b>
                     </Typography>
                   </Grid>
 
                   {/* Price and Actions */}
                   <Grid item xs={3}>
-                    <Typography variant="body1" fontWeight="bold" color="primary">
-                      ₹{item.finalPrice}
+                    <Typography variant="subtitle2" fontWeight={700} color="text.primary" sx={{ fontSize: "0.95rem" }}>
+                      ₹{(item.sellingPrice * (item.quantity || 1)).toFixed(2)}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      <s>₹{item.price}</s> ₹{item.discount} Off
-                    </Typography>
+                    {item.discountPercentage > 0 && (
+                      <Typography variant="caption" color="text.secondary">
+                        <s>₹{(item.originalPrice * (item.quantity || 1)).toFixed(2)}</s>{" "}
+                        <span style={{ color: "#388e3c", fontWeight: 600 }}>
+                          {item.discountPercentage}% OFF
+                        </span>
+                      </Typography>
+                    )}
                     <Box display="flex" alignItems="center" mt={1}>
                       <IconButton
                         size="small"
                         onClick={() => handleQuantityChange(item, false)}
                         disabled={item.quantity <= 1}
+                        sx={{ border: "1px solid #e0e0e0", borderRadius: "4px", p: 0.25 }}
                       >
-                        <RemoveIcon />
+                        <RemoveIcon fontSize="small" />
                       </IconButton>
-                      <Typography variant="body1" mx={1}>
+                      <Typography variant="body2" fontWeight={600} mx={1.5}>
                         {item?.quantity || 1}
                       </Typography>
                       <IconButton
                         size="small"
                         onClick={() => handleQuantityChange(item, true)}
+                        sx={{ border: "1px solid #e0e0e0", borderRadius: "4px", p: 0.25 }}
                       >
-                        <AddIcon />
+                        <AddIcon fontSize="small" />
                       </IconButton>
                     </Box>
                     <Box display="flex" gap={1} mt={1}>
                       <Button
                         size="small"
+                        variant="outlined"
                         color="error"
                         onClick={() => handleRemove(item)}
+                        sx={{ borderRadius: "4px", fontWeight: 600, fontSize: "0.75rem" }}
                       >
                         Remove
                       </Button>
@@ -369,50 +371,55 @@ const Cart = () => {
 
           {/* Price Details */}
           <Grid item xs={12} md={4}>
-            <Paper elevation={3} sx={{ p: 2, position: "sticky", top: 20 }}>
-              <Typography variant="h6" mb={2}>
+            <Paper elevation={1} sx={{ p: 2.5, position: "sticky", top: 20, borderRadius: "4px" }}>
+              <Typography variant="subtitle1" fontWeight={700} color="text.primary" mb={2}>
                 Price Details
               </Typography>
               <Divider />
               <Box display="flex" justifyContent="space-between" mt={2}>
-                <Typography>Price ({priceDetails.totalItems} items)</Typography>
-                <Typography>₹{priceDetails.originalTotal}</Typography>
+                <Typography variant="body2" color="text.secondary">Price ({priceDetails.totalItems} items)</Typography>
+                <Typography variant="body2" fontWeight={500}>₹{priceDetails.originalTotal}</Typography>
+              </Box>
+              {Number(priceDetails.discountTotal) > 0 && (
+                <Box display="flex" justifyContent="space-between" mt={1}>
+                  <Typography variant="body2" color="text.secondary">Discount</Typography>
+                  <Typography variant="body2" color="success.main" fontWeight={600}>- ₹{priceDetails.discountTotal}</Typography>
+                </Box>
+              )}
+              <Box display="flex" justifyContent="space-between" mt={1}>
+                <Typography variant="body2" color="text.secondary">Platform Fee</Typography>
+                <Typography variant="body2" fontWeight={500}>₹{priceDetails.platformFee}</Typography>
               </Box>
               <Box display="flex" justifyContent="space-between" mt={1}>
-                <Typography>Discount</Typography>
-                <Typography color="success.main">- ₹{priceDetails.discountTotal}</Typography>
-              </Box>
-              <Box display="flex" justifyContent="space-between" mt={1}>
-                <Typography>Platform Fee</Typography>
-                <Typography>₹{priceDetails.platformFee}</Typography>
-              </Box>
-              <Box display="flex" justifyContent="space-between" mt={1}>
-                <Typography>Delivery Charges</Typography>
-                <Typography color="success.main">{priceDetails.deliveryCharge}</Typography>
+                <Typography variant="body2" color="text.secondary">Delivery Charges</Typography>
+                <Typography variant="body2" color="success.main" fontWeight={600}>{priceDetails.deliveryCharge}</Typography>
               </Box>
               <Divider sx={{ my: 2 }} />
               <Box display="flex" justifyContent="space-between">
-                <Typography fontWeight="bold">Total Amount</Typography>
-                <Typography fontWeight="bold">₹{priceDetails.finalTotal}</Typography>
+                <Typography variant="body1" fontWeight={700}>Total Amount</Typography>
+                <Typography variant="body1" fontWeight={700}>₹{priceDetails.finalTotal}</Typography>
               </Box>
-              <Typography color="success.main" mt={1}>
-                You will save ₹{priceDetails.discountTotal} on this order
-              </Typography>
+              {Number(priceDetails.discountTotal) > 0 && (
+                <Typography variant="body2" color="success.main" fontWeight={600} mt={1}>
+                  You will save ₹{priceDetails.discountTotal} on this order
+                </Typography>
+              )}
               <Button
                 variant="contained"
-                color="primary"
+                color="secondary"
                 fullWidth
-                sx={{ mt: 2 }}
+                size="large"
+                sx={{ mt: 2.5, borderRadius: "4px", fontWeight: 700, fontSize: "0.95rem", py: 1.5 }}
                 onClick={handlePlaceOrder}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : "Place Order"}
+                {loading ? <CircularProgress size={22} color="inherit" /> : "Place Order"}
               </Button>
             </Paper>
           </Grid>
         </Grid>
       )}
-    </Box >
+    </Box>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Container, Paper, Grid, TextField, Button, Alert, IconButton } from "@mui/material";
 import { AttachFile, Clear } from '@mui/icons-material';
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ const AddProduct = () => {
 
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
+  const [productDiscount, setProductDiscount] = useState(0);
   const [productCampany, setProductCampany] = useState("");
   const [productDescription, setProductDescription] = useState("");
   const [respMsg, setRespMsg] = useState("");
@@ -21,11 +22,18 @@ const AddProduct = () => {
     let id = JSON.parse(user_id);
     setUserId(id?.data?._id);
 
-    console.log("productImages from admin", productImages)
+    const disc = productDiscount === "" ? 0 : Number(productDiscount);
+    if (isNaN(disc) || disc < 0 || disc > 100) {
+      setRespMsg("Discount percentage must be between 0 and 100");
+      setIsError(true);
+      return;
+    }
+
     const formData = new FormData();
     formData.append("name", productName);
     formData.append("price", Number(productPrice));
     formData.append('originalPrice', Number(productPrice));
+    formData.append("discountPercentage", disc);
     formData.append("company", productCampany);
     formData.append("userId", userId);
     formData.append("productDescription", productDescription);
@@ -35,15 +43,17 @@ const AddProduct = () => {
 
     fetch("http://localhost:5000/products/addProduct", {
       method: "POST",
-      body: formData // Do not set the content-Type header manually
+      body: formData
     })
       .then((resp) => resp.json())
       .then((data) => {
         setRespMsg(data?.msg);
         setIsError(data?.err);
+        if (!data?.err) {
+          clareForm();
+        }
       });
   };
-
 
   const handleCloseResponeMsg = () => {
     setRespMsg("");
@@ -53,14 +63,12 @@ const AddProduct = () => {
     setProductImages(files);
 
     const names = Array.from(files).map(file => file.name).join(', ');
-    console.log("File names", names);
     setFileNames(names);
   };
 
   const handleClearFiles = () => {
     setProductImages([]);
     setFileNames('');
-    // document.getElementById('file-input').value = '';
   };
   const handleFileInputClick = () => {
     document.getElementById('file-input').click();
@@ -70,8 +78,11 @@ const AddProduct = () => {
     setProductName('');
     setProductCampany('');
     setProductPrice('');
+    setProductDiscount(0);
     setProductDescription("");
-  }
+    setProductImages([]);
+    setFileNames('');
+  };
 
   return (
     <Container
@@ -140,9 +151,46 @@ const AddProduct = () => {
                   <TextField
                     fullWidth
                     label="Price"
+                    type="number"
                     variant="outlined"
+                    inputProps={{ min: 0, step: "any" }}
                     value={productPrice}
                     onChange={(e) => setProductPrice(e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Discount percentage"
+                    type="number"
+                    variant="outlined"
+                    inputProps={{ min: 0, max: 100, step: "any" }}
+                    value={productDiscount}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "") {
+                        setProductDiscount("");
+                        return;
+                      }
+                      const num = parseFloat(val);
+                      if (num >= 0 && num <= 100) {
+                        setProductDiscount(val);
+                      }
+                    }}
+                    error={
+                      productDiscount !== "" &&
+                      (Number(productDiscount) < 0 ||
+                        Number(productDiscount) > 100 ||
+                        isNaN(Number(productDiscount)))
+                    }
+                    helperText={
+                      productDiscount !== "" &&
+                      (Number(productDiscount) < 0 ||
+                        Number(productDiscount) > 100 ||
+                        isNaN(Number(productDiscount)))
+                        ? "Discount must be between 0 and 100%"
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid item xs={12} sx={{ mb: 2 }}>
