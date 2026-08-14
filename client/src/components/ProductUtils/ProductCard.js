@@ -37,7 +37,8 @@ const ProductCard = ({
 
   const hasDiscount = discountPercentage > 0 && discountPercentage <= 100;
   const discountAmount = hasDiscount ? Math.round((basePrice * discountPercentage) / 100) : 0;
-  const sellingPrice = hasDiscount ? basePrice - discountAmount : basePrice;
+  let sellingPrice = hasDiscount ? basePrice - discountAmount : basePrice;
+  sellingPrice = Number(sellingPrice).toFixed(2);
 
   return (
     <Grid item xs={12} sm={6} md={3} lg={2.4}>

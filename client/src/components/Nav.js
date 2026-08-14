@@ -193,7 +193,7 @@ const Nav = () => {
                         <>
                             {!isAdmin && (
                                 <>
-                                    <NavLink
+                                    {/* <NavLink
                                         to="/"
                                         style={({ isActive }) =>
                                             isActive
@@ -202,7 +202,7 @@ const Nav = () => {
                                         }
                                     >
                                         Home
-                                    </NavLink>
+                                    </NavLink> */}
                                     <NavLink
                                         to="/product"
                                         style={({ isActive }) =>

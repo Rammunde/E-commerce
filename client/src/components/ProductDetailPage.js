@@ -55,7 +55,8 @@ const ProductDetailPage = () => {
 
     const hasDiscount = discountPercentage > 0 && discountPercentage <= 100;
     const discountAmount = hasDiscount ? Math.round((basePrice * discountPercentage) / 100) : 0;
-    const sellingPrice = hasDiscount ? basePrice - discountAmount : basePrice;
+    let sellingPrice = hasDiscount ? basePrice - discountAmount : basePrice;
+    sellingPrice = Number(sellingPrice).toFixed(2);
 
     const base64ToFile = useCallback((base64String, filename) => {
         if (!base64String) return null;
@@ -82,7 +83,7 @@ const ProductDetailPage = () => {
             const formData = new FormData();
             formData.append("product_id", product._id);
             formData.append("name", product.name);
-            formData.append("price", product.price);
+            formData.append("price", sellingPrice);
             formData.append("originalPrice", product.price);
             formData.append("discountPercentage", product.discountPercentage || 0);
             formData.append("company", product.company || "");
