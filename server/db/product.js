@@ -31,6 +31,37 @@ const productSchema = new mongoose.Schema({
         type: [String],
         default: [],
     },
+    category: {
+        type: String,
+        default: "",
+    },
+    brand: {
+        type: String,
+        default: "",
+    },
+    tags: {
+        type: [String],
+        default: [],
+    },
+    searchableText: {
+        type: String,
+        default: "",
+    },
+    embedding: {
+        type: [Number],
+        default: [],
+    },
+    embeddingVersion: {
+        type: String,
+        default: "2.0",
+    },
+    embeddingModel: {
+        type: String,
+        default: "",
+    },
+    embeddingUpdatedAt: {
+        type: Date,
+    },
     registrationDate: {
         type: Date,
         default: Date.now,

@@ -37,6 +37,28 @@ async function connectProductsDb() {
   }
 }
 
+async function connectReviewsDb() {
+  try {
+    const db = await connectEcomerceDB();
+    const collection = db.collection(config.REVIEWS || "reviews");
+    return collection;
+  } catch (error) {
+    console.error("Error connecting to the reviews collection:", error);
+    throw error;
+  }
+}
+
+async function connectReviewAnalysisDb() {
+  try {
+    const db = await connectEcomerceDB();
+    const collection = db.collection(config.REVIEW_ANALYSIS || "review_analysis");
+    return collection;
+  } catch (error) {
+    console.error("Error connecting to the review_analysis collection:", error);
+    throw error;
+  }
+}
+
 async function closeEcomerceDB() {
   try {
     await client.close();
@@ -47,5 +69,11 @@ async function closeEcomerceDB() {
   }
 }
 
-
-module.exports = { connectEcomerceDB, closeEcomerceDB, connectUsersDB, connectProductsDb};
+module.exports = {
+  connectEcomerceDB,
+  closeEcomerceDB,
+  connectUsersDB,
+  connectProductsDb,
+  connectReviewsDb,
+  connectReviewAnalysisDb,
+};

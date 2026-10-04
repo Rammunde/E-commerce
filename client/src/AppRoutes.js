@@ -12,10 +12,14 @@ import ProductTable from "./components/AdminPanel/Products/ProductTable";
 // import AdminPanel from "./components/AdminPanel";
 import SignUp from "./components/SignUp";
 import Login from './components/Login';
+import { useLocation } from "react-router-dom";
 
 const AppRoutes = () => {
   const user = useSelector((state) => state.app.user);
   const isAdmin = user?.data?.role === 'Admin';
+  const location = useLocation();
+  const pathname = location.pathname;
+  console.log(pathname)
 
   console.log("isAdmin", isAdmin)
   return (
@@ -41,7 +45,9 @@ const AppRoutes = () => {
         )}
       </Route>
       <Route path='/signup' element={<SignUp />} />
-      <Route path='/login' element={<Login />} />
+      {pathname === '/' ?
+        <Route path='/' element={<Login />} />
+        : <Route path='/login' element={<Login />} />}
     </Routes>
   );
 };

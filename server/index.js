@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const userRoutes = require('./userRoutes');
 const productRoutes = require('./productRoutes');
+const reviewRoutes = require('./reviewRoutes');
 require('./db/config');
 const { updatePriceTypeScript } = require('./services/product.service');
 
@@ -37,6 +38,9 @@ app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 // Route handlers
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
+app.use('/api/products', productRoutes);
+app.use('/reviews', reviewRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Initialize price type script
 updatePriceTypeScript();

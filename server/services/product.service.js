@@ -6,6 +6,8 @@ const fs = require('fs');
 const { ObjectId } = require("mongodb");
 const { PRODUCTS, USERS_DB, ACTIVE_CART, ORDERS } = require('../common/collectionNames');
 const { sendOrderConfirmation } = require('./email.service');
+const { buildSearchableText, generateEmbedding, getActiveModelName } = require('./embeddingService');
+const { searchProducts } = require('./semanticSearchService');
 
 module.exports = {
   addProduct,
@@ -21,6 +23,7 @@ module.exports = {
   getAllProductList,
   updatePriceTypeScript,
   placeOrder,
+  semanticSearch,
 };
 
 const storage = multer.memoryStorage({
@@ -66,7 +69,7 @@ async function addProduct(req, res) {
       });
     });
 
-    const { name, price, originalPrice, discountPercentage, company, userId, productDescription } = req.body;
+    const { name, price, originalPrice, discountPercentage, company, userId, productDescription, category, brand, tags } = req.body;
     const files = req.files || [];
     const base64Images = await Promise.all(files.map(file => {
       if (!file.buffer) {
@@ -89,15 +92,54 @@ async function addProduct(req, res) {
 
     const validatedDiscount = sanitizeDiscountPercentage(discountPercentage);
 
+    // Normalize tags array
+    let parsedTags = [];
+    if (Array.isArray(tags)) {
+      parsedTags = tags;
+    } else if (typeof tags === 'string' && tags.trim() !== '') {
+      try {
+        parsedTags = JSON.parse(tags);
+      } catch {
+        parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+      }
+    }
+
+    // Generate searchable text and vector embedding
+    const searchableText = buildSearchableText({
+      name,
+      productDescription,
+      category: category || '',
+      brand: brand || company || '',
+      tags: parsedTags,
+    });
+
+    let embedding = [];
+    let embeddingModel = '';
+    try {
+      const embRes = await generateEmbedding(searchableText);
+      embedding = embRes.embedding || [];
+      embeddingModel = embRes.model || getActiveModelName();
+    } catch (embErr) {
+      console.warn("Embedding generation warning during addProduct:", embErr.message);
+    }
+
     const productDoc = {
       name: name,
       price: parsedPrice,
       originalPrice: parsedPrice,
       discountPercentage: validatedDiscount,
       company: company,
+      brand: brand || company || '',
+      category: category || '',
+      tags: parsedTags,
       userId: userId,
       productDescription: productDescription,
       productImages: base64Images, // Base64-encoded images
+      searchableText: searchableText,
+      embedding: embedding,
+      embeddingVersion: "2.0",
+      embeddingModel: embeddingModel,
+      embeddingUpdatedAt: new Date(),
       registrationDate: new Date(),
     };
 
@@ -130,6 +172,9 @@ async function updateProduct(req, res) {
       discountPercentage,
       company,
       productDescription,
+      category,
+      brand,
+      tags,
       keepImageIndexes,
     } = req.body;
 
@@ -167,16 +212,44 @@ async function updateProduct(req, res) {
     const parsedPrice = price !== undefined ? parseFloat(price) : undefined;
     const validatedDiscount = discountPercentage !== undefined ? sanitizeDiscountPercentage(discountPercentage) : undefined;
 
+    let parsedTags = tags !== undefined ? (Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : [])) : undefined;
+
     // build update doc
     const updateDoc = {
       ...(name && { name }),
       ...(parsedPrice !== undefined && !isNaN(parsedPrice) && { price: parsedPrice, originalPrice: parsedPrice }),
       ...(validatedDiscount !== undefined && { discountPercentage: validatedDiscount }),
       ...(company && { company }),
+      ...(brand !== undefined && { brand }),
+      ...(category !== undefined && { category }),
+      ...(parsedTags !== undefined && { tags: parsedTags }),
       ...(productDescription && { productDescription }),
       ...(finalImages.length && { productImages: finalImages }),
       updatedAt: new Date(),
     };
+
+    // Re-generate vector embedding only if product text metadata changed
+    if (name !== undefined || productDescription !== undefined || company !== undefined || category !== undefined || brand !== undefined || tags !== undefined) {
+      const newSearchableText = buildSearchableText({
+        name: name !== undefined ? name : product.name,
+        productDescription: productDescription !== undefined ? productDescription : product.productDescription,
+        category: category !== undefined ? category : product.category,
+        brand: (brand !== undefined ? brand : (product.brand || company || product.company)),
+        tags: parsedTags !== undefined ? parsedTags : product.tags,
+      });
+      updateDoc.searchableText = newSearchableText;
+      try {
+        const embRes = await generateEmbedding(newSearchableText);
+        if (embRes?.embedding?.length > 0) {
+          updateDoc.embedding = embRes.embedding;
+          updateDoc.embeddingVersion = "2.0";
+          updateDoc.embeddingModel = embRes.model || getActiveModelName();
+          updateDoc.embeddingUpdatedAt = new Date();
+        }
+      } catch (embErr) {
+        console.warn("Embedding generation warning during updateProduct:", embErr.message);
+      }
+    }
 
     await collection.updateOne(
       { _id: new ObjectId(id) },
@@ -288,7 +361,7 @@ async function deleteProduct(req, res) {
 }
 
 async function editProduct(req, res) {
-  const { productId, name, company, price, discountPercentage, userId } = req.body;
+  const { productId, name, company, price, discountPercentage, userId, category, brand, tags } = req.body;
 
   try {
     const collection = await db.connectProductsDb();
@@ -299,15 +372,58 @@ async function editProduct(req, res) {
 
     const validatedDiscount = sanitizeDiscountPercentage(discountPercentage);
 
+    const existingProduct = await collection.findOne({ _id: new ObjectId(productId) });
+    if (!existingProduct) {
+      return res.status(404).json({ err: true, msg: "Product not found" });
+    }
+
+    let parsedTags = tags !== undefined
+      ? (Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : []))
+      : existingProduct.tags;
+
+    const effectiveName = name || existingProduct.name;
+    const effectiveCompany = company || existingProduct.company;
+    const effectiveDesc = existingProduct.productDescription || "";
+    const effectiveCat = category !== undefined ? category : (existingProduct.category || "");
+    const effectiveBrand = brand !== undefined ? brand : (existingProduct.brand || effectiveCompany);
+
+    const newSearchableText = buildSearchableText({
+      name: effectiveName,
+      productDescription: effectiveDesc,
+      category: effectiveCat,
+      brand: effectiveBrand,
+      tags: parsedTags,
+    });
+
+    let newEmbedding = existingProduct.embedding || [];
+    let newEmbeddingModel = existingProduct.embeddingModel || '';
+    try {
+      const embRes = await generateEmbedding(newSearchableText);
+      if (embRes?.embedding?.length > 0) {
+        newEmbedding = embRes.embedding;
+        newEmbeddingModel = embRes.model || getActiveModelName();
+      }
+    } catch (embErr) {
+      console.warn("Embedding generation warning during editProduct:", embErr.message);
+    }
+
     let result = await collection.updateOne(
       { _id: new ObjectId(productId) },
       {
         $set: {
-          name,
+          name: effectiveName,
           price: convertedPrices,
           originalPrice: convertedPrices,
           discountPercentage: validatedDiscount,
-          company,
+          company: effectiveCompany,
+          brand: effectiveBrand,
+          category: effectiveCat,
+          tags: parsedTags || [],
+          searchableText: newSearchableText,
+          embedding: newEmbedding,
+          embeddingVersion: "2.0",
+          embeddingModel: newEmbeddingModel,
+          embeddingUpdatedAt: new Date(),
           userId,
           updatedAt: new Date(),
         }
@@ -727,3 +843,28 @@ async function placeOrder(req, res) {
     });
   }
 }
+
+/**
+ * Controller for Semantic & Hybrid Search
+ * GET /products/semantic-search?q=...&page=1&limit=8
+ */
+async function semanticSearch(req, res) {
+  try {
+    const query = req.query.q !== undefined
+      ? req.query.q
+      : (req.query.search !== undefined ? req.query.search : (req.query.query || ""));
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 8;
+    const minScore = req.query.minScore ? parseFloat(req.query.minScore) : 0.05;
+
+    const result = await searchProducts(query, { page, limit, minScore });
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in semanticSearch controller:", error);
+    return res.status(500).json({
+      err: true,
+      msg: "Failed to perform semantic search",
+      error: error.message,
+    });
+  }
+}

@@ -7,7 +7,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 
-export default function CustomizedInputBase({ onSearch }) {
+export default function CustomizedInputBase({ onSearch, placeholder = "Search products (e.g. running shoes)..." }) {
   const [inputValue, setInputValue] = React.useState("");
 
   const handleSubmit = (e) => {
@@ -18,11 +18,7 @@ export default function CustomizedInputBase({ onSearch }) {
   const handleChange = (e) => {
     const val = e.target.value;
     setInputValue(val);
-
-    // Trigger search reset when input is cleared
-    if (val.length === 0) {
-      onSearch("");
-    }
+    onSearch(val);
   };
 
   const handleClear = () => {
@@ -41,7 +37,7 @@ export default function CustomizedInputBase({ onSearch }) {
       </IconButton>
       <InputBase
         sx={{ ml: 1, flex: 1 }}
-        placeholder="Search..."
+        placeholder={placeholder}
         inputProps={{ "aria-label": "search products" }}
         value={inputValue}
         onChange={handleChange}

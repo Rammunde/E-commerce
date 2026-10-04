@@ -14,9 +14,11 @@ import {
   Typography,
   Box,
   Button,
+  Chip,
 } from "@mui/material";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { useSelector } from "react-redux";
-import { useGetProductsQuery, useAddToCartMutation } from "../redux/apiSlice";
+import { useGetProductsQuery, useSemanticSearchQuery, useAddToCartMutation } from "../redux/apiSlice";
 import CustomizedInputBase from "../components/ProductUtils/CustomizedInputBase";
 
 const ProductCard = lazy(() =>
@@ -46,28 +48,42 @@ const ProductPage = () => {
     return () => clearTimeout(handler);
   }, [searchProduct]);
 
-  const { data, isLoading, isFetching } = useGetProductsQuery({
-    page,
-    limit: ITEMS_PER_PAGE,
-    search: debouncedSearch,
-  });
+  const isSearching = Boolean(debouncedSearch && debouncedSearch.trim());
+
+  // Default product list query (active when not searching)
+  const defaultQuery = useGetProductsQuery(
+    { page, limit: ITEMS_PER_PAGE, search: "" },
+    { skip: isSearching }
+  );
+
+  // Semantic & Hybrid search query (active when searching)
+  const semanticQuery = useSemanticSearchQuery(
+    { query: debouncedSearch, page, limit: ITEMS_PER_PAGE },
+    { skip: !isSearching }
+  );
+
+  const activeData = isSearching ? semanticQuery.data : defaultQuery.data;
+  const isLoading = isSearching ? semanticQuery.isLoading : defaultQuery.isLoading;
+  const isFetching = isSearching ? semanticQuery.isFetching : defaultQuery.isFetching;
+  const isQueryError = isSearching ? semanticQuery.isError : defaultQuery.isError;
 
   useEffect(() => {
-    if (data?.allProducts) {
+    const list = activeData?.allProducts || activeData?.products;
+    if (list) {
       if (page === 1) {
-        setAllProducts(data.allProducts);
+        setAllProducts(list);
       } else {
-        setAllProducts((prev) => [...prev, ...data.allProducts]);
+        setAllProducts((prev) => [...prev, ...list]);
       }
     }
-  }, [data, page]);
+  }, [activeData, page]);
 
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch]);
 
   const loadMoreProducts = () => {
-    if (data && page < data.totalPages) {
+    if (activeData && page < (activeData.totalPages || 1)) {
       setPage((prev) => prev + 1);
     }
   };
@@ -193,25 +209,39 @@ const ProductPage = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Grid container spacing={3} alignItems="center" mb={2}>
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={6}>
           <Typography variant="h4" component="h1" gutterBottom>
             Products
           </Typography>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <CustomizedInputBase onSearch={setSearchProduct} />
         </Grid>
       </Grid>
-      {/* 
-      {respMsg && (
-        <Alert
-          severity={severity}
-          onClose={handleClose}
-          sx={{ mb: 2, borderRadius: 2 }}
-        >
-          {respMsg}
+
+      {isSearching && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5, flexWrap: "wrap" }}>
+          <Chip
+            icon={<AutoAwesomeIcon sx={{ fontSize: "1rem !important" }} />}
+            label={`Semantic Search: "${debouncedSearch}"`}
+            color="primary"
+            variant="outlined"
+            size="small"
+            sx={{ fontWeight: 600 }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {isFetching
+              ? "Searching products with AI embeddings..."
+              : `${activeData?.totalCount ?? 0} relevant product${(activeData?.totalCount ?? 0) === 1 ? '' : 's'} found`}
+          </Typography>
+        </Box>
+      )}
+
+      {isQueryError && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+          Failed to load search results. Please check your network and try again.
         </Alert>
-      )} */}
+      )}
 
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
@@ -233,18 +263,22 @@ const ProductPage = () => {
             ))
           ) : (
             <Grid item xs={12}>
-              <Typography variant="body1" color="textSecondary">
-                {isLoading ? "Loading products..." : "No products found."}
+              <Typography variant="body1" color="textSecondary" sx={{ py: 4, textAlign: "center" }}>
+                {isLoading || isFetching
+                  ? "Searching for relevant products..."
+                  : isSearching
+                    ? `No products found matching "${debouncedSearch}". Try searching for related features or brands.`
+                    : "No products found."}
               </Typography>
             </Grid>
           )}
         </Suspense>
       </Grid>
 
-      {data?.totalPages > page && (
+      {activeData?.totalPages > page && (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
           <Button variant="contained" onClick={loadMoreProducts} disabled={isFetching}>
-            Load More
+            {isFetching ? "Loading..." : "Load More"}
           </Button>
         </Box>
       )}

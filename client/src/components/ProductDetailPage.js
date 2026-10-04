@@ -22,6 +22,8 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { useGetProductByIdQuery, useAddToCartMutation } from "../redux/apiSlice";
+import ReviewInsights from "./ProductUtils/ReviewInsights";
+import CustomerReviews from "./ProductUtils/CustomerReviews";
 
 const ProductDetailPage = () => {
     const { id } = useParams();
@@ -512,6 +514,14 @@ const ProductDetailPage = () => {
                         </Box>
                     </Box>
                 </Paper>
+
+                {/* AI-Powered Review Insights & Customer Feedback */}
+                {product?._id && (
+                    <>
+                        <ReviewInsights productId={product._id} />
+                        <CustomerReviews productId={product._id} />
+                    </>
+                )}
             </Box>
 
             {/* Snackbar */}

@@ -96,6 +96,27 @@ const ProductCard = ({
             </Box>
           )} */}
 
+          {prod.similarityScore !== undefined && prod.similarityScore !== null && prod.similarityScore > 0 && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                bgcolor: "rgba(25, 118, 210, 0.92)",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: "0.68rem",
+                px: 0.9,
+                py: 0.25,
+                borderRadius: "10px",
+                zIndex: 2,
+                boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+              }}
+            >
+              {`${Math.round(prod.similarityScore * 100)}% match`}
+            </Box>
+          )}
+
           <img
             src={selectedMainImages[prod._id] || prod.productImages?.[0] || ""}
             alt={prod.name}
