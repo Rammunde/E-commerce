@@ -12,5 +12,7 @@ module.exports = {
     LOCAL_EMBEDDING_MODEL: process.env.LOCAL_EMBEDDING_MODEL || "Xenova/all-MiniLM-L6-v2",
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "",
     RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "",
+
+    JWT_SECRET: process.env.TOKEN_KEY || "mysecretkey",
 };
 

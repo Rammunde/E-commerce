@@ -4,6 +4,9 @@ const nodemailer = require('nodemailer');
 const { ObjectId } = require('mongodb');
 const config = require('../config');
 const { ACTIVE_CART } = require('../common/collectionNames');
+const JWT = require("jsonwebtoken");
+const JWT_SECRET = config.JWT_SECRET;
+
 
 module.exports = {
   registerUser,
@@ -295,7 +298,8 @@ async function loginUser(req, res) {
       });
 
       if (user) {
-        res.status(200).json({ data: user, err: false, msg: "User logged in successfully" });
+        const token = `Bearer ${authenticateUser(user)}`;
+        res.status(200).json({ data: user, token: token, msg: "User login successfully", err: false });
       } else {
         res.status(401).json({ data: null, err: true, msg: "Please enter correct credentials" });
       }
@@ -303,7 +307,8 @@ async function loginUser(req, res) {
       const user = await collection.findOne({ username, password });
 
       if (user) {
-        res.status(200).json({ data: user, err: false, msg: "User logged in successfully" });
+        const token = `Bearer ${authenticateUser(user)}`;
+        res.status(200).json({ data: user, token: token, msg: "User login successfully", err: false });
       } else {
         res.status(401).json({ data: null, err: true, msg: "Please enter correct credentials" });
       }
@@ -311,6 +316,14 @@ async function loginUser(req, res) {
   } catch (error) {
     console.error('Error while logging in:', error);
     res.status(500).json({ err: true, msg: 'Internal Server Error' });
+  }
+}
+
+ function authenticateUser(user) {
+  try {
+    return JWT.sign({ userId: user._id, username: user.name, user: user.role }, JWT_SECRET, { expiresIn: '1h' })
+  } catch (error) {
+    throw new Error("Error while generating token: " + error.message);
   }
 }
 

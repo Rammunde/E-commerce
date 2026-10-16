@@ -17,7 +17,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
 import { useLoginUserMutation } from "../redux/apiSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { setUser } from "../redux/appSlice";
+import { setToken, setUser } from "../redux/appSlice";
 import { PORTAL_NAME } from "../config";
 
 const LoginPage = () => {
@@ -32,6 +32,7 @@ const LoginPage = () => {
   const [loginUser, { isLoading }] = useLoginUserMutation();
 
   const userFromStore = useSelector((state) => state.app.user);
+  const authToken = useSelector((state) => state.app.authToken);
 
   // Redirect if already logged in
   console.log("error", error)
@@ -53,6 +54,9 @@ const LoginPage = () => {
       const result = await loginUser({ username, password }).unwrap();
       if (result) {
         dispatch(setUser(result));
+        console.log("result.data?.token", result.token);
+        dispatch(setToken(result.token));
+        localStorage.setItem("token",result.token);
         setRespMsg("Login successful!");
         setError(false);
         const isAdmin = result?.data?.role === "Admin";
